@@ -369,7 +369,7 @@ if __name__ == '__main__':
     """
     @app.route('/trans_video', methods=['POST'])
     def trans_video():
-        data = request.json
+        data = json.loads(request.json) if type(request.json) == str else request.json
         name = data.get('name', '')
         if not name:
             return jsonify({"code": 1, "msg": "The parameter name is not allowed to be empty"})
