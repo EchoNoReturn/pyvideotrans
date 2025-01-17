@@ -67,4 +67,4 @@ def get_gradio_demo():
 
 if __name__ == "__main__":
     demo = get_gradio_demo()
-    demo.launch()
+    demo.launch(share=True)
