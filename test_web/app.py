@@ -6,8 +6,7 @@ from use_server import TaskStatus, UsePyVideoServer
 from data_type.trans_video_req_data import *
 from data_type.tts_req_data import *
 
-SERVER_URL = "http://127.0.0.1:7861"
-
+SERVER_URL = "http://127.0.0.1:9011"
 server_instant = UsePyVideoServer(SERVER_URL)
 
 def put_video(data: TransVideoReqData):
@@ -16,45 +15,31 @@ def put_video(data: TransVideoReqData):
     while task_id:
         res = server_instant.get_task_status(task_id)
         status: TaskStatus = res.get("status")
+        msg: str = res.get("msg", "")
         if status == TaskStatus.SUCCESS:
             print("===== SUCCESS =====")
             return {
-                "absolute_path": res.absolute_path,
-                "url": res.url,
+                "absolute_path":  res.get('absolute_path', 'N/A'),
+                "url": res.get('url', 'N/A'),
             }
         elif status == TaskStatus.FAILED:
+            print("===== FAILED =====")
             print(f"task_id:{task_id} status:{status}")
-            print("===== END =====")
             break
         else:
-            print(f"task_id:{task_id} status:{status}")
+            print(f"task_id:{task_id} status:{status} msg:{msg}")
         sleep(1)
 
 
 def handle(video_url):
-    # 这里是具体的处理逻辑
     data = TransVideoReqData(
         name=video_url,
-        recogn_type=0,
-        split_type="all",
-        model_name="tiny",
-        translate_type=0,
-        source_language="zh-cn",
-        target_language="en",
-        tts_type=0,
-        voice_role="zh-CN-YunjianNeural",
-        voice_rate="+0%",
-        volume="+0%",
-        pitch="+0Hz",
-        voice_autorate=True,
-        video_autorate=True,
-        is_separate=False,
-        back_audio="",
-        subtitle_type=1,
-        append_video=False,
-        is_cuda=False,
-        detect_language="zh",
+        translate_type = 0,   #翻译渠道
+        target_language = "zh-cn",  #目标语言
+        tts_type = 0,   #配音渠道
+        subtitle_type = 1,  #字幕嵌入类型
     )
+    
     res = put_video(data)
     if res:
         the_list = res['absolute_path'] if type(res['absolute_path']) == list else res['absolute_path']
