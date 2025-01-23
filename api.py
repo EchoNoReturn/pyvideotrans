@@ -414,19 +414,22 @@ if __name__ == '__main__':
             "only_video": bool(data.get('only_video', False))
 
         }
+        # 语音识别验证
         if not cfg['subtitles']:
             is_allow = recognition.is_allow_lang(langcode=cfg['target_language'], recogn_type=cfg['recogn_type'])
             if is_allow is not True:
                 return jsonify({"code": 5, "msg": is_allow})
-
             is_input = recognition.is_input_api(recogn_type=cfg['recogn_type'], return_str=True)
             if is_input is not True:
                 return jsonify({"code": 5, "msg": is_input})
+        
+        # 翻译验证 
         if cfg['source_language'] != cfg['target_language']:
             is_allow=translator.is_allow_translate(translate_type=cfg['translate_type'],show_target=cfg['target_language'],return_str=True)
             if is_allow is not True:
                 return jsonify({"code":5,"msg":is_allow})
-
+        
+        # 配音验证
         if cfg['voice_role'] and cfg['voice_role'].lower()!='no' and cfg['target_language']:
             is_allow_lang = tts_model.is_allow_lang(langcode=cfg['target_language'], tts_type=cfg['tts_type'])
             if is_allow_lang is not True:
@@ -434,7 +437,6 @@ if __name__ == '__main__':
             is_input_api = tts_model.is_input_api(tts_type=cfg['tts_type'], return_str=True)
             if is_input_api is not True:
                 return jsonify({"code": 5, "msg": is_input_api})
-
 
 
         obj = tools.format_video(name, None)
