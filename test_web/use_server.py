@@ -2,23 +2,7 @@ import requests
 import enum
 import json
 
-from data_type.tts_req_data import TTSReqData
 from data_type.trans_video_req_data import TransVideoReqData
-
-TTS_TYPE_DICT = {
-    0: "Edge-TTS",
-    1: "CosyVoice",
-    2: "ChatTTS",
-    3: "302.AI",
-    4: "FishTTS",
-    5: "Azure-TTS",
-    6: "GPT-SoVITS",
-    8: "OpenAI TTS",
-    9: "Elevenlabs.io",
-    10: "Google TTS",
-    11: "自定义TTS API",
-}
-
 
 class TaskStatus(enum.Enum):
     RUNNING = "RUNNING"
@@ -35,16 +19,12 @@ class UsePyVideoServer(object):
     def _get_req_url(self, path: str):
         return f"{self.server_addr}{path}"
 
-    def tts(self, data: TTSReqData):
-        url = self._get_req_url("tts")
-        res = requests.post(url, json=data)
-        return res.json()
-
     # 翻译视频
     def trans_video(self, data: TransVideoReqData):
         url = self._get_req_url("trans_video")
         # print(json.dumps(data.__dict__), json.loads(json.dumps(data.__dict__)))
         res = requests.post(url, json=json.dumps(data.__dict__))
+        print(f"请求参数: {json.dumps(data.__dict__)}")  # 打印请求参数
         try:
             res_data = res.json()
             print(f"res_data:{res_data}")

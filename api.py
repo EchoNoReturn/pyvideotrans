@@ -430,7 +430,9 @@ if __name__ == '__main__':
                 return jsonify({"code":5,"msg":is_allow})
         
         # 配音验证
-        if cfg['voice_role'] and cfg['voice_role'].lower()!='no' and cfg['target_language']:
+        if (cfg['voice_role'] and 
+            cfg['voice_role'].strip().lower() != 'No' and 
+            cfg['target_language']):
             is_allow_lang = tts_model.is_allow_lang(langcode=cfg['target_language'], tts_type=cfg['tts_type'])
             if is_allow_lang is not True:
                 return jsonify({"code": 4, "msg": is_allow_lang})
