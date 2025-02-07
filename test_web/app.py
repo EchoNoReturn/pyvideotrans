@@ -9,7 +9,6 @@ server_instant = UsePyVideoServer(SERVER_URL)
 
 def put_video(data: TransVideoReqData):
     task_id = server_instant.trans_video(data)
-    print("===== START =====")
     while task_id:
         res = server_instant.get_task_status(task_id)
         status: TaskStatus = res.get("status")
@@ -28,7 +27,6 @@ def put_video(data: TransVideoReqData):
             print(f"task_id:{task_id} status:{status} msg:{msg}")
         sleep(1)
 
-
 def handle(video_url, source_language, translate_type, target_language, tts_type, subtitle_type, voice_role, voice_autorate):
     data = TransVideoReqData(
         name=video_url,
@@ -36,11 +34,10 @@ def handle(video_url, source_language, translate_type, target_language, tts_type
         translate_type=translate_type,   #翻译渠道
         target_language=target_language,  #目标语言
         tts_type=tts_type,   #配音渠道
-        subtitle_type=subtitle_type,  #字幕嵌入类型
-        voice_role=voice_role,
-        video_autorate=voice_autorate,
-    )
-    
+        subtitle_type=subtitle_type,    #字幕嵌入类型
+        voice_role=voice_role,  #角色类型
+        video_autorate=voice_autorate,  #自动对齐
+    )    
     res = put_video(data)
     if res:
         the_list = res['absolute_path'] if isinstance(res['absolute_path'], list) else res['absolute_path']
@@ -58,7 +55,7 @@ def get_gradio_demo():
     # 源语言
     source_languages = [
         ("自动检测", "auto"),
-        ("中文简体", "zh-cn"),
+        ("中文", "zh-cn"),
         ("英语", "en"),
         ("日语", "ja"),
         ("韩语", "ko"),
@@ -66,10 +63,11 @@ def get_gradio_demo():
     # 翻译渠道
     translate_types = [
         ("谷歌翻译", 0),
+        ("微软翻译", 1),
     ]
     # 目标语言
     target_languages = [
-        ("中文简体", "zh-cn"),
+        ("中文", "zh-cn"),
         ("英语", "en"),
         ("日语", "ja"),
         ("韩语", "ko"),
@@ -86,47 +84,45 @@ def get_gradio_demo():
         ("嵌入双硬字幕", 3),
         ("嵌入双软字幕", 4),
     ]
-    # 配音角色
-    voice_roles = [
-        ("无配音","No"),
-        # 中文配音
-        ("云健 - 男声(zh-CN)","zh-CN-YunjianNeural"),
-        # ("晓晓 - 女声(zh-CN)","zh-CN-XiaoxiaoNeural"),
-        # ("云扬 - 男声(zh-CN)","zh-CN-YunyangNeural"),
-        # ("晓辰 - 女声(zh-CN)","zh-CN-XiaochenNeural"),
-        # # 英文配音
-        # ("Guy - 男声(en-US)","en-US-GuyNeural"),
-        # ("Jenny - 女声(en-US)","en-US-JennyNeural"),
-        # # 日语配音
-        # ("圭太 - 男声(ja-JP)", "ja-JP-KeitaNeural"),
-        # ("七海 - 女声(ja-JP)", "ja-JP-NanamiNeural"),
-        # # 韩语配音
-        # ("인준 - 男声(ko-KR)", "ko-KR-InJoonNeural"),
-        # ("지민 - 女声(ko-KR)", "ko-KR-JiMinNeural"),
-    ]
     
+    def update_voice_roles(selected_language):
+        if selected_language == "zh-cn":
+            return [("无配音", "No"), ("云健 - 男声(zh-CN)", "zh-CN-YunjianNeural"), ("晓晓 - 女声(zh-CN)", "zh-CN-XiaoxiaoNeural")]
+        elif selected_language == "ja":
+            return [("无配音", "No"), ("圭太 - 男声(ja-JP)", "ja-JP-KeitaNeural"), ("七海 - 女声(ja-JP)", "ja-JP-NanamiNeural")]
+        elif selected_language == "en":
+            return [("无配音", "No"), ("Guy - 男声(en-US)", "en-US-GuyNeural"), ("Jenny - 女声(en-US)", "en-US-JennyNeural")]
+        elif selected_language == "ko":
+            return [("无配音", "No"), ("인준 - 男声(ko-KR)", "ko-KR-InJoonNeural"), ("지민 - 女声(ko-KR)", "ko-KR-JiMinNeural")]
+        else:
+            return [("无配音", "No")]
+
     with gr.Blocks() as demo:
         with gr.Row():
             with gr.Column():
                 video_input = gr.Video(label="视频输入")
                 with gr.Row():
-                    source_language = gr.Dropdown(label="源语言", choices=source_languages, value=source_languages[0][1])
+                    source_language = gr.Dropdown(label="源语言", choices=source_languages,value=None)
                     translate_type = gr.Dropdown(label="翻译渠道", choices=translate_types, value=translate_types[0][1])
-                    target_language = gr.Dropdown(label="目标语言", choices=target_languages, value=target_languages[0][1])
+                    target_language = gr.Dropdown(label="目标语言", choices=target_languages,value=None)
                 with gr.Row():
                     subtitle_type= gr.Dropdown(label="字幕嵌入类型", choices=subtitle_types, value=subtitle_types[0][1])
                     tts_type= gr.Dropdown(label="配音渠道", choices=tts_types, value=tts_types[0][1])
-                    voice_role = gr.Dropdown(label="配音角色",choices=voice_roles,value=voice_roles[0][1])
+                    voice_role = gr.Dropdown(label="配音角色")
                 with gr.Row():
                     voice_autorate = gr.Radio(label="是否自动加快语速与字幕对齐", choices=[True, False], value=False)
                 run_button = gr.Button(value="运行")
             with gr.Column():
                 video_output = gr.Video(label="视频输出")
-                # logText = gr.Textbox(label="运行日志")
         run_button.click(
             fn=handle, 
             inputs=[video_input, source_language, translate_type, target_language, tts_type, subtitle_type, voice_role, voice_autorate], 
-            outputs=video_output
+            outputs=[video_output]
+        )
+        target_language.change(
+            fn=lambda lang: gr.update(choices=update_voice_roles(lang), value=update_voice_roles(lang)[0][1]),
+            inputs=target_language,
+            outputs=voice_role
         )
         return demo
 
