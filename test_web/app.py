@@ -27,16 +27,19 @@ def put_video(data: TransVideoReqData):
             print(f"task_id:{task_id} status:{status} msg:{msg}")
         sleep(1)
 
-def handle(video_url, source_language, translate_type, target_language, tts_type, subtitle_type, voice_role, voice_autorate):
+def handle(video_url, source_language, translate_type, target_language,model_name, subtitle_type, voice_role, voice_autorate,remove_noise,is_cuda):
     data = TransVideoReqData(
         name=video_url,
         source_language=source_language,  # 源语言
         translate_type=translate_type,   #翻译渠道
         target_language=target_language,  #目标语言
-        tts_type=tts_type,   #配音渠道
+        tts_type=0,   #配音渠道
+        model_name=model_name,  #模型名称
         subtitle_type=subtitle_type,    #字幕嵌入类型
         voice_role=voice_role,  #角色类型
         video_autorate=voice_autorate,  #自动对齐
+        remove_noise=remove_noise,  #降噪
+        is_cuda=is_cuda,    #CUDA加速
     )    
     res = put_video(data)
     if res:
@@ -73,8 +76,13 @@ def get_gradio_demo():
         ("韩语", "ko"),
     ]
     # 配音渠道
-    tts_types = [
-        ("Edge-TTS", 0),
+    # tts_types = [
+    #     ("Edge-TTS", 0),
+    # ]
+    # 模型名称
+    model_names = [
+        ("tiny", "tiny"),
+        ("large-v3", "large-v3"),
     ]
     # 字幕嵌入类型
     subtitle_types = [
@@ -102,21 +110,24 @@ def get_gradio_demo():
             with gr.Column():
                 video_input = gr.Video(label="视频输入")
                 with gr.Row():
-                    source_language = gr.Dropdown(label="源语言", choices=source_languages,value=None)
+                    source_language = gr.Dropdown(label="源语言", choices=source_languages,value=source_languages[0][1])
                     translate_type = gr.Dropdown(label="翻译渠道", choices=translate_types, value=translate_types[0][1])
                     target_language = gr.Dropdown(label="目标语言", choices=target_languages,value=None)
                 with gr.Row():
-                    subtitle_type= gr.Dropdown(label="字幕嵌入类型", choices=subtitle_types, value=subtitle_types[0][1])
-                    tts_type= gr.Dropdown(label="配音渠道", choices=tts_types, value=tts_types[0][1])
+                    # tts_type= gr.Dropdown(label="配音渠道", choices=tts_types, value=tts_types[0][1])
+                    model_name = gr.Dropdown(label="模型名称", choices=model_names, value=model_names[0][1])
                     voice_role = gr.Dropdown(label="配音角色")
+                    subtitle_type= gr.Dropdown(label="字幕嵌入类型", choices=subtitle_types, value=subtitle_types[0][1])
                 with gr.Row():
-                    voice_autorate = gr.Radio(label="是否自动加快语速与字幕对齐", choices=[True, False], value=False)
+                    voice_autorate = gr.Radio(label="自动加快语速与字幕对齐", choices=[True, False], value=False)
+                    remove_noise = gr.Radio(label="降噪", choices=[True, False], value=False)
+                    is_cuda = gr.Radio(label="CUDA加速", choices=[True, False], value=False)
                 run_button = gr.Button(value="运行")
             with gr.Column():
                 video_output = gr.Video(label="视频输出")
         run_button.click(
             fn=handle, 
-            inputs=[video_input, source_language, translate_type, target_language, tts_type, subtitle_type, voice_role, voice_autorate], 
+            inputs=[video_input, source_language, translate_type, target_language, model_name, subtitle_type, voice_role, voice_autorate,remove_noise,is_cuda], 
             outputs=[video_output]
         )
         target_language.change(

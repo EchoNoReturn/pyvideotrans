@@ -14,6 +14,7 @@ class TransVideoReqData(object):
         translate_type: int = 0,
         target_language: str = 'zh-cn',
         source_language: str = 'auto',
+        
         tts_type: int = 0,
         voice_role: str = 'zh-CN-YunjianNeural',
         voice_rate: str = "+0%",
@@ -27,7 +28,8 @@ class TransVideoReqData(object):
         
         is_batch: bool = True,
         app_mode: str = 'biaozhun',
-        only_video: bool = False
+        only_video: bool = False,
+        remove_noise: bool = False,
     ):
         # 通用
         self.name = name
@@ -63,3 +65,4 @@ class TransVideoReqData(object):
         self.is_batch = is_batch
         self.app_mode = app_mode
         self.only_video = only_video
+        remove_noise = remove_noise
