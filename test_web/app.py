@@ -82,6 +82,7 @@ def get_gradio_demo():
     # 模型名称
     model_names = [
         ("tiny", "tiny"),
+        ("medium", "medium"),
         ("large-v3", "large-v3"),
     ]
     # 字幕嵌入类型
@@ -117,7 +118,7 @@ def get_gradio_demo():
                     # tts_type= gr.Dropdown(label="配音渠道", choices=tts_types, value=tts_types[0][1])
                     model_name = gr.Dropdown(label="模型名称", choices=model_names, value=model_names[0][1])
                     voice_role = gr.Dropdown(label="配音角色")
-                    subtitle_type= gr.Dropdown(label="字幕嵌入类型", choices=subtitle_types, value=subtitle_types[0][1])
+                    subtitle_type= gr.Dropdown(label="字幕嵌入类型", choices=subtitle_types, value=subtitle_types[1][1])
                 with gr.Row():
                     voice_autorate = gr.Radio(label="自动加快语速与字幕对齐", choices=[True, False], value=False)
                     remove_noise = gr.Radio(label="降噪", choices=[True, False], value=False)
