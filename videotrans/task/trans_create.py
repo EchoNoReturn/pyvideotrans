@@ -7,11 +7,10 @@ import shutil
 import textwrap
 import threading
 import time
+
 from pathlib import Path
 from typing import Dict
-
 from pydub import AudioSegment
-
 from videotrans import translator
 from videotrans.configure import config
 from videotrans.recognition import run as run_recogn,Faster_Whisper_XXL

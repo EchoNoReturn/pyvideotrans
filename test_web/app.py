@@ -120,8 +120,9 @@ def get_gradio_demo():
                     voice_role = gr.Dropdown(label="配音角色")
                     subtitle_type= gr.Dropdown(label="字幕嵌入类型", choices=subtitle_types, value=subtitle_types[1][1])
                 with gr.Row():
-                    voice_autorate = gr.Radio(label="自动加快语速与字幕对齐", choices=[True, False], value=False)
-                    remove_noise = gr.Radio(label="降噪", choices=[True, False], value=False)
+                    voice_autorate = gr.Radio(label="加快语速对齐", choices=[True, False], value=False)
+                    is_separate = gr.Radio(label="保存背景音乐", choices=[True, False], value=False)
+                    remove_noise = gr.Radio(label="人声降噪", choices=[True, False], value=False)
                     is_cuda = gr.Radio(label="CUDA加速", choices=[True, False], value=False)
                 run_button = gr.Button(value="运行")
             with gr.Column():
