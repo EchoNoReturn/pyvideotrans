@@ -28,6 +28,7 @@ LIBRE_INDEX = 16
 AI302_INDEX = 17
 ALI_INDEX = 18
 QWEN_INDEX = 19 # Qwen
+DEEPSEEK_INDEX = 20 # deepseek
 # 翻译通道名字列表，显示在界面
 TRANSLASTE_NAME_LIST = [
     "Google(免费)" if config.defaulelang == 'zh' else 'Google',
@@ -664,6 +665,11 @@ def run(*, translate_type=None,
     if translate_type == QWEN_INDEX:
         from videotrans.translator._qwen import Qwen
         return Qwen(**kwargs).run()
+
+    # deepseek 翻译模型
+    if translate_type == DEEPSEEK_INDEX:
+        from videotrans.translator._deepseek import Deepseek
+        return Deepseek(**kwargs).run()
 
     if translate_type == BAIDU_INDEX:
         from videotrans.translator._baidu import Baidu
