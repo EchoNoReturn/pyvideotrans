@@ -27,6 +27,7 @@ CLAUDE_INDEX = 15
 LIBRE_INDEX = 16
 AI302_INDEX = 17
 ALI_INDEX = 18
+QWEN_INDEX = 19 # Qwen
 # 翻译通道名字列表，显示在界面
 TRANSLASTE_NAME_LIST = [
     "Google(免费)" if config.defaulelang == 'zh' else 'Google',
@@ -658,6 +659,11 @@ def run(*, translate_type=None,
     if translate_type == TENCENT_INDEX:
         from videotrans.translator._tencent import Tencent
         return Tencent(**kwargs).run()
+
+    # 阿里通义千问 翻译模型
+    if translate_type == QWEN_INDEX:
+        from videotrans.translator._qwen import Qwen
+        return Qwen(**kwargs).run()
 
     if translate_type == BAIDU_INDEX:
         from videotrans.translator._baidu import Baidu

@@ -67,6 +67,7 @@ def get_gradio_demo():
     translate_types = [
         ("谷歌翻译", 0),
         ("微软翻译", 1),
+        ("千问翻译", 19),
     ]
     # 目标语言
     target_languages = [
