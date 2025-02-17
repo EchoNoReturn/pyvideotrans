@@ -61,5 +61,6 @@ class Deepseek(BaseTrans):
                 content = self.openAI(text, old_language, new_language)
                 if self.contains_chinese(content):
                     item['text'] = ''
-                item['text'] = content
+                else:
+                    item['text'] = content
         return self.text_list
