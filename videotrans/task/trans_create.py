@@ -361,8 +361,6 @@ class TransCreate(BaseTask):
                 if (self.cfg['source_language_code'] !='auto' and self.cfg['source_language_code'][:2] not in config.ELEVENLABS_CLONE) or (self.cfg['target_language_code'][:2] not in config.ELEVENLABS_CLONE):
                     self.hasend = True
                     raise Exception('ElevenLabs: Cloning of the selected language is not supported')
-                
-
                 self.ignore_align=True
                 from videotrans.tts._elevenlabs import ElevenLabsClone
                 ElevenLabsClone(self.cfg['source_wav'],self.cfg['target_wav'],self.cfg['source_language_code'],self.cfg['target_language_code']).run()

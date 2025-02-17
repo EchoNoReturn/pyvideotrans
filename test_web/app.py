@@ -33,7 +33,7 @@ def handle(video_url, source_language, translate_type, target_language,model_nam
         source_language=source_language,  # 源语言
         translate_type=translate_type,   #翻译渠道
         target_language=target_language,  #目标语言
-        tts_type=0,   #配音渠道
+        tts_type=1,   #配音渠道
         model_name=model_name,  #模型名称
         subtitle_type=subtitle_type,    #字幕嵌入类型
         voice_role=voice_role,  #角色类型
@@ -77,10 +77,6 @@ def get_gradio_demo():
         ("日语", "ja"),
         ("韩语", "ko"),
     ]
-    # 配音渠道
-    # tts_types = [
-    #     ("Edge-TTS", 0),
-    # ]
     # 模型名称
     model_names = [
         ("tiny", "tiny"),
@@ -95,18 +91,11 @@ def get_gradio_demo():
         ("嵌入双硬字幕", 3),
         ("嵌入双软字幕", 4),
     ]
-    
-    def update_voice_roles(selected_language):
-        if selected_language == "zh-cn":
-            return [("无配音", "No"), ("云健 - 男声(zh-CN)", "zh-CN-YunjianNeural"), ("晓晓 - 女声(zh-CN)", "zh-CN-XiaoxiaoNeural")]
-        elif selected_language == "ja":
-            return [("无配音", "No"), ("圭太 - 男声(ja-JP)", "ja-JP-KeitaNeural"), ("七海 - 女声(ja-JP)", "ja-JP-NanamiNeural")]
-        elif selected_language == "en":
-            return [("无配音", "No"), ("Guy - 男声(en-US)", "en-US-GuyNeural"), ("Jenny - 女声(en-US)", "en-US-JennyNeural")]
-        elif selected_language == "ko":
-            return [("无配音", "No"), ("인준 - 男声(ko-KR)", "ko-KR-InJoonNeural"), ("지민 - 女声(ko-KR)", "ko-KR-JiMinNeural")]
-        else:
-            return [("无配音", "No")]
+    # 配音角色
+    voice_roles = [
+        ("无配音", "No"),
+        ("克隆", "clone"),
+    ]
 
     with gr.Blocks() as demo:
         with gr.Row():
@@ -114,12 +103,11 @@ def get_gradio_demo():
                 video_input = gr.Video(label="视频输入")
                 with gr.Row():
                     source_language = gr.Dropdown(label="源语言", choices=source_languages,value=source_languages[0][1])
-                    translate_type = gr.Dropdown(label="翻译渠道", choices=translate_types, value=translate_types[0][1])
-                    target_language = gr.Dropdown(label="目标语言", choices=target_languages,value=None)
+                    translate_type = gr.Dropdown(label="翻译渠道", choices=translate_types, value=translate_types[1][1])
+                    target_language = gr.Dropdown(label="目标语言", choices=target_languages,value=target_languages[1][1])
                 with gr.Row():
-                    # tts_type= gr.Dropdown(label="配音渠道", choices=tts_types, value=tts_types[0][1])
                     model_name = gr.Dropdown(label="模型名称", choices=model_names, value=model_names[0][1])
-                    voice_role = gr.Dropdown(label="配音角色")
+                    voice_role = gr.Dropdown(label="配音角色", choices=voice_roles, value=voice_roles[1][1])
                     subtitle_type= gr.Dropdown(label="字幕嵌入类型", choices=subtitle_types, value=subtitle_types[1][1])
                 with gr.Row():
                     voice_autorate = gr.Radio(label="加快语速对齐", choices=[True, False], value=False)
@@ -133,11 +121,6 @@ def get_gradio_demo():
             fn=handle, 
             inputs=[video_input, source_language, translate_type, target_language, model_name, subtitle_type, voice_role, voice_autorate,remove_noise,is_cuda], 
             outputs=[video_output]
-        )
-        target_language.change(
-            fn=lambda lang: gr.update(choices=update_voice_roles(lang), value=update_voice_roles(lang)[0][1]),
-            inputs=target_language,
-            outputs=voice_role
         )
         return demo
 

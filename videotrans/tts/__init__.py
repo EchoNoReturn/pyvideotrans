@@ -134,7 +134,7 @@ def is_input_api(tts_type: int = None,return_str=False):
         if return_str:
             return "Please configure the api and key information of the VolcEngine F5-TTS channel first."
         from videotrans.winform import  f5tts as f5tts_win
-        f5_win.openwin()
+        f5tts_win.openwin()
         return False
     return True
 
