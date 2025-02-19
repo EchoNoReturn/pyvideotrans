@@ -24,6 +24,7 @@
 > 集合了最新最全的AI模型和品牌/按需付费零月费/管理和使用分离/所有AI能力均提供API/每周推出2-3个新应用
 
 
+
 # 主要用途和功能
 
 【自动翻译视频并配音】将视频中的声音翻译为另一种语言的配音，并嵌入该语言字幕
@@ -60,6 +61,8 @@
 
 [![Open In Colab](https://img.shields.io/badge/Colab-F9AB00?style=for-the-badge&logo=googlecolab&color=525252)](https://colab.research.google.com/drive/1kPTeAMz3LnWRnGmabcz4AWW42hiehmfm?usp=sharing)
 
+
+
 # 预打包版本(仅win10/win11可用，MacOS/Linux系统使用源码部署)
 
 > 使用pyinstaller打包，未做免杀和签名，杀软可能报毒，请加入信任名单或使用源码部署
@@ -69,6 +72,7 @@
 1. 解压到英文路径下，并且路径中不含有空格。解压后双击 sp.exe  (若遇到权限问题可右键使用管理员权限打开)
 
 4. 注意：必须解压后使用，不可直接压缩包内双击使用，也不可解压后移动sp.exe文件到其他位置
+
 
 
 # MacOS源码部署
@@ -84,24 +88,24 @@
 
     ```
     brew install libsndfile
-
+   
     brew install ffmpeg
-
+   
     brew install git
-
+   
     brew install python@3.10
-
+   
     ```
 
     继续执行
 
     ```
     export PATH="/usr/local/opt/python@3.10/bin:$PATH"
-
+   
     source ~/.bash_profile 
 	
 	source ~/.zshrc
-
+   
     ```
 
 
@@ -193,10 +197,10 @@ apt-get install ffmpeg
 7. 执行 `pip install -r requirements.txt`，如果提示失败，执行如下2条命令切换pip镜像到阿里镜像
 
     ```
-
+    
     pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/
     pip config set install.trusted-host mirrors.aliyun.com
-
+    
     ```
 
     然后重新执行,如果已切换到阿里镜像源，仍提示失败，请尝试执行 `pip install -r requirements.txt `
@@ -214,6 +218,7 @@ apt-get install ffmpeg
 10. `python sp.py` 打开软件界面
 
 
+
 # Window10/11 源码部署
 
 0. 打开 https://www.python.org/downloads/ 下载 windows3.10，下载后双击，一路next，注意要选中“Add to PATH”
@@ -229,10 +234,10 @@ apt-get install ffmpeg
 7. 执行 `pip install -r requirements.txt `，如果提示失败，执行如下2条命令切换pip镜像到阿里镜像
 
     ```
-
+    
     pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/
     pip config set install.trusted-host mirrors.aliyun.com
-
+    
     ```
 
     然后重新执行,如果已切换到阿里镜像源，仍提示失败，请尝试执行 `pip install -r requirements.txt`
@@ -267,15 +272,41 @@ pip install ctranslate2==3.24.0
 
 
 
+# 源码运行部署补充
+
+## 运行
+
+服务端：python .\api.py
+
+网页端：python .\test_web\app.py
+
+## ffmpeg下载地址
+
+https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2023-11-30-12-55/ffmpeg-n6.0.1-win64-gpl-6.0.zip
+
+下载后复制进ffmpeg文件夹
+
+## 油管视频下载说明
+
+如果源码部署后无法从油管下载视频，请在浏览器中点开下列地址下载，然后放到本目录下
+
+win: https://github.com/jianchang512/pyvideotrans/releases/download/v2.19/ytwin32.exe
+
+mac: https://github.com/jianchang512/pyvideotrans/releases/download/v2.19/ytdarwin
+
+linux: https://github.com/jianchang512/pyvideotrans/releases/download/v2.19/ytlinux
+
+
 
 # 使用教程和文档
 
 请查看 https://pyvideotrans.com
 
 
+
 # 语音识别模型:
 
-   下载地址： https://pyvideotrans.com/model.html
+下载地址： https://pyvideotrans.com/model.html
 
 
 
@@ -286,6 +317,7 @@ pip install ctranslate2==3.24.0
 [用Gemini Api 给视频翻译设置方法/b站](https://b23.tv/fED1dS3)
 
 [如何下载和安装](https://www.bilibili.com/video/BV1Gr421s7cN/)
+
 
 
 # 软件预览截图
@@ -313,6 +345,7 @@ pip install ctranslate2==3.24.0
 [适配 CosyVoice 的 api.py](https://github.com/jianchang512/cosyvoice-api)
 
 
+
 ## 致谢
 
 > 本程序主要依赖的部分开源项目
@@ -337,3 +370,4 @@ pip install ctranslate2==3.24.0
 <img width="200" src="https://github.com/jianchang512/pyvideotrans/assets/3378335/fe1aa29d-c26d-46d3-b7f3-e9c030ef32c7">
 
 <img width="200" src="https://pyvideotrans.com/images/biancn.jpg">
+

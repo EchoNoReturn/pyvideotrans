@@ -50,3 +50,4 @@ simplejson
 sortedcontainers
 alibabacloud_alimt20181012==1.1.0
 samplerate;sys_platform == 'win32'
+gradio
