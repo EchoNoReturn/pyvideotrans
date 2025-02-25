@@ -37,8 +37,6 @@ pack-api.bat
 gitcmd.bat
 google.txt
 videotrans/translator/freechatgpt.py
-videotrans/cfg.json
-videotrans/params.json
 /tmp/
 runtime
 f5-tts

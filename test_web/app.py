@@ -96,6 +96,7 @@ def get_gradio_demo():
     tts_types = [
         ("Edge-TTS",0),
         ("CosyVoice-TTS",1),
+        ("F5_TTS",13),
     ]
     
     # 配音角色
@@ -118,6 +119,9 @@ def get_gradio_demo():
         ("지민 - 女声(ko-KR)", "ko-KR-JiMinNeural"),
     ]
     cosy_voice_roles = [
+        ("克隆", "clone"),
+    ]
+    f5_tts_roles = [
         ("无配音", "No"),
         ("克隆", "clone"),
     ]
@@ -146,11 +150,14 @@ def get_gradio_demo():
                 video_output = gr.Video(label="视频输出")
         run_button.click(
             fn=handle, 
-            inputs=[video_input, source_language, translate_type, target_language, model_name, subtitle_type, tts_type, voice_role, voice_autorate, is_separate, remove_noise, is_cuda], 
+            inputs=[video_input, source_language, translate_type, target_language, model_name, subtitle_type, tts_type, voice_role, voice_autorate, is_separate, remove_noise, is_cuda],
             outputs=[video_output]
         )
         tts_type.change(
-            fn=lambda tts: gr.update(choices=edge_voice_roles if tts == 0 else cosy_voice_roles, value=(edge_voice_roles if tts == 0 else cosy_voice_roles)[0][1]),
+            fn=lambda tts: gr.update(
+                choices=(edge_voice_roles if tts == 0 else cosy_voice_roles if tts == 1 else f5_tts_roles),
+                value=(edge_voice_roles if tts == 0 else cosy_voice_roles if tts == 1 else f5_tts_roles)[0][1]
+            ),
             inputs=tts_type,
             outputs=voice_role
         )

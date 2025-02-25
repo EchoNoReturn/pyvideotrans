@@ -33,6 +33,7 @@ class CosyVoice(BaseTTS):
             return
         try:
             text = data_item['text'].strip()
+            reference_text = data_item['ref_text'].strip()
             if not text:
                 return
             rate = float(self.rate.replace('%', '')) if self.rate else 0
@@ -44,7 +45,6 @@ class CosyVoice(BaseTTS):
                     "new": 0,
                     "streaming": 0
                 }
-
                 rolelist = tools.get_cosyvoice_role()
 
                 if role == 'clone':
@@ -59,13 +59,14 @@ class CosyVoice(BaseTTS):
                 if data['speaker'] not in ["中文男", "中文女", "英文男", "英文女", "日语男", "韩语女", "粤语女"]:
                     data['new'] = 1
 
+                # 发起请求
                 response = requests.post(f"{self.api_url}", json=data, proxies=self.proxies, timeout=3600)
-                config.logger.info(f'请求数据：{self.api_url=},{data=}')
             else:
                 api_url = self.api_url
                 data = {
-                    "text": text,
-                    "lang": "zh" if self.language.startswith('zh') else self.language
+                    "text":text,
+                    "reference_text":reference_text,
+                    "lang":"zh" if self.language.startswith('zh') else self.language
                 }
                 rolelist = tools.get_cosyvoice_role()
                 if role == 'clone':
@@ -88,7 +89,6 @@ class CosyVoice(BaseTTS):
                     api_url += '/tts'
                 else:
                     data['role'] = '中文女'
-                config.logger.info(f'请求数据：{api_url=},{data=}')
                 # 克隆声音
                 response = requests.post(f"{api_url}", data=data, proxies={"http": "", "https": ""}, timeout=3600)
 
