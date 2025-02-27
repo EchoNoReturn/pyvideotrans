@@ -4,12 +4,14 @@ if __name__ == '__main__':
     import multiprocessing
     import random
     import re
+    import os
     import shutil
     import threading
     import time
     from pathlib import Path
 
-    from flask import Flask, request, jsonify
+    from flask import Flask, request, jsonify, send_from_directory
+    from flask_cors import CORS
     from waitress import serve
 
 
@@ -52,10 +54,10 @@ if __name__ == '__main__':
     end_status_list = ['error', 'succeed', 'end', 'stop']
     #日志状态
     logs_status_list = ['logs']
-
     ######################
 
     app = Flask(__name__, static_folder=TARGET_DIR)
+    CORS(app)  # 启用跨域资源共享
 
     # 第1个接口 /tts
     """
@@ -367,6 +369,41 @@ if __name__ == '__main__':
         print(res.json())
     
     """
+    # 上传视频
+    UPLOAD_FOLDER =  os.path.join(os.path.expanduser("~"), 'Downloads', 'PyVideo')
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv'}
+    def allowed_file(filename):
+        return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    @app.route('/upload', methods=['POST'])
+    def upload_file():
+        if 'file' not in request.files:
+            return jsonify({"code":0,"msg": "No file part"})
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"code":0,"msg": "No selected file"})
+        if file and allowed_file(file.filename):
+            filename = file.filename
+            file_path = os.path.join(UPLOAD_FOLDER, filename)
+            file.save(file_path)
+            return jsonify({"code":0,"msg": "uploaded successfully", "file_path": file_path})
+        return jsonify({"code":1,"msg": "Invalid file type"})
+    
+    # 下载视频
+    @app.route('/download', methods=['GET'])
+    def download_file():
+        file_path = request.args.get('file_path')
+        
+        if file_path and os.path.exists(file_path):
+            # 获取文件名
+            filename = os.path.basename(file_path)
+            # 获取文件所在目录
+            directory = os.path.dirname(file_path)
+            return send_from_directory(directory, filename, as_attachment=True)
+        else:
+            return jsonify({"code":1,"msg": "文件不存在"})
+    
+    #视频翻译
     @app.route('/trans_video', methods=['POST'])
     def trans_video():
         data = json.loads(request.json) if type(request.json) == str else request.json
@@ -412,7 +449,6 @@ if __name__ == '__main__':
             "app_mode": "biaozhun",
 
             "only_video": bool(data.get('only_video', False))
-
         }
         # 语音识别验证
         if not cfg['subtitles']:
@@ -440,7 +476,6 @@ if __name__ == '__main__':
             if is_input_api is not True:
                 return jsonify({"code": 5, "msg": is_input_api})
 
-
         obj = tools.format_video(name, None)
         obj['target_dir'] = TARGET_DIR + f'/{obj["uuid"]}'
         obj['cache_folder'] = config.TEMP_DIR + f'/{obj["uuid"]}'
@@ -451,7 +486,7 @@ if __name__ == '__main__':
         trk = TransCreate(cfg)
         config.prepare_queue.append(trk)
         tools.set_process(text=f"Currently in queue No.{len(config.prepare_queue)}",uuid=obj['uuid'])
-        #
+
         return jsonify({'code': 0, 'task_id': obj['uuid']})
 
 
@@ -626,7 +661,6 @@ if __name__ == '__main__':
         except Exception as e:
             print(f"Error while accessing directory {dirname}: {e}")
             return []
-
 
     def _listen_queue():
         # 监听队列日志 uuid_logs_queue 不在停止中的 stoped_uuid_set
