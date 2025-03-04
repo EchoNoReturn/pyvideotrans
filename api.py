@@ -1,5 +1,4 @@
-if __name__ == '__main__':
-    print('API ...')
+if __name__ == "__main__":
     import json
     import multiprocessing
     import random
@@ -8,13 +7,15 @@ if __name__ == '__main__':
     import shutil
     import threading
     import time
-    from pathlib import Path
+    import json
+    import oss2
+    import uuid
+    import mimetypes
 
+    from pathlib import Path
     from flask import Flask, request, jsonify, send_from_directory
     from flask_cors import CORS
     from waitress import serve
-
-
     from videotrans.configure import config
     from videotrans.task._dubbing import DubbingSrt
     from videotrans.task._speech2text import SpeechToText
@@ -23,41 +24,80 @@ if __name__ == '__main__':
     from videotrans.task.trans_create import TransCreate
     from videotrans.util import tools
     from videotrans import tts as tts_model, translator, recognition
+    from oss2.exceptions import OssError
 
-    ###### 配置信息
-    #### api文档 https://pyvideotrans.com/api-cn
-    config.exec_mode='api'
+    ####### 配置信息
+    config.exec_mode = "api"
+
+    # 设置根目录和默认主机、端口
     ROOT_DIR = config.ROOT_DIR
     HOST = "127.0.0.1"
     PORT = 9011
-    if Path(ROOT_DIR+'/host.txt').is_file():
-        host_str=Path(ROOT_DIR+'/host.txt').read_text(encoding='utf-8').strip()
-        host_str=re.sub(r'https?://','',host_str).split(':')
-        if len(host_str)>0:
-            HOST=host_str[0]
-        if len(host_str)==2:
-            PORT=int(host_str[1])
+
+    # 读取 host.txt 设置主机和端口
+    host_file = Path(ROOT_DIR + "/host.txt")
+    if host_file.is_file():
+        host_str = host_file.read_text(encoding="utf-8").strip()
+        host_str = re.sub(r"https?://", "", host_str).split(":")
+
+        if len(host_str) > 0:
+            HOST = host_str[0]
+        if len(host_str) == 2:
+            PORT = int(host_str[1])
 
     # 存储生成的文件和进度日志
-    API_RESOURCE='apidata'
-    TARGET_DIR = ROOT_DIR + f'/{API_RESOURCE}'
+    API_RESOURCE = "apidata"
+    TARGET_DIR = f"{ROOT_DIR}/{API_RESOURCE}"
     Path(TARGET_DIR).mkdir(parents=True, exist_ok=True)
+
     # 进度日志
-    PROCESS_INFO = TARGET_DIR + '/processinfo'
+    PROCESS_INFO = f"{TARGET_DIR}/processinfo"
     if Path(PROCESS_INFO).is_dir():
         shutil.rmtree(PROCESS_INFO)
     Path(PROCESS_INFO).mkdir(parents=True, exist_ok=True)
-    # url前缀
+
+    # 任务结束状态
+    END_STATUS_LIST = ["error", "succeed", "end", "stop"]
+    # 日志状态
+    LOGS_STATUS_LIST = ["logs"]
+
+    # URL 前缀
     URL_PREFIX = f"http://{HOST}:{PORT}/{API_RESOURCE}"
     config.exit_soft = False
-    # 停止 结束 失败状态
-    end_status_list = ['error', 'succeed', 'end', 'stop']
-    #日志状态
-    logs_status_list = ['logs']
-    ######################
 
+    # 创建 Flask 应用
     app = Flask(__name__, static_folder=TARGET_DIR)
-    CORS(app)  # 启用跨域资源共享
+    # 启用跨域资源共享
+    CORS(app)
+
+    # 读取 OSS 配置
+    config_file = "_config.json"
+    with open(config_file, "r") as file:
+        config_json = json.load(file)
+
+    # 提取 OSS 配置参数
+    oss_config = config_json["oss"]
+    access_key_id = oss_config["accessKeyId"]
+    access_key_secret = oss_config["accessKeySecret"]
+    bucket_name = oss_config["bucketName"]
+    endpoint = oss_config["endpoint"]
+
+    # 创建 OSS 认证对象
+    auth = oss2.Auth(access_key_id, access_key_secret)
+    bucket = oss2.Bucket(auth, endpoint, bucket_name)
+    # 测试连接
+    try:
+        bucket.get_bucket_info()
+        print(f"\n✅ 成功连接到 OSS，存储桶：{bucket_name}\n")
+    except Exception as e:
+        print("\n❌ 连接 OSS 失败:", str(e))
+
+    # 缓存目录路径创建
+    PROJECT_PATH = os.path.dirname(os.path.abspath(__file__))
+    UPLOAD_FOLDER = os.path.join(PROJECT_PATH, ".video_tmp")
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+    ###### 接口分割线 ######
 
     # 第1个接口 /tts
     """
@@ -104,54 +144,67 @@ if __name__ == '__main__':
         print(res.json())
     ```
     """
-    @app.route('/tts', methods=['POST'])
+
+    @app.route("/tts", methods=["POST"])
     def tts():
         data = request.json
         # 从请求数据中获取参数
-        name = data.get('name', '').strip()
+        name = data.get("name", "").strip()
         if not name:
-            return jsonify({"code": 1, "msg": "The parameter name is not allowed to be empty"})
-        is_srt=True
-        if name.find("\n") == -1 and name.endswith('.srt'):
+            return jsonify(
+                {"code": 1, "msg": "The parameter name is not allowed to be empty"}
+            )
+        is_srt = True
+        if name.find("\n") == -1 and name.endswith(".srt"):
             if not Path(name).exists():
                 return jsonify({"code": 1, "msg": f"The file {name} is not exist"})
         else:
-            tmp_file = config.TEMP_DIR + f'/tts-srt-{time.time()}-{random.randint(1, 9999)}.srt'
-            is_srt=tools.is_srt_string(name)
-            Path(tmp_file).write_text(tools.process_text_to_srt_str(name) if not is_srt else name, encoding='utf-8')
+            tmp_file = (
+                config.TEMP_DIR
+                + f"/tts-srt-{time.time()}-{random.randint(1, 9999)}.srt"
+            )
+            is_srt = tools.is_srt_string(name)
+            Path(tmp_file).write_text(
+                tools.process_text_to_srt_str(name) if not is_srt else name,
+                encoding="utf-8",
+            )
             name = tmp_file
 
-        cfg={
-            "name":name,
-            "voice_role":data.get("voice_role"),
-            "target_language_code":data.get('target_language_code'),
-            "tts_type":int(data.get('tts_type',0)),
-            "voice_rate":data.get('voice_rate',"+0%"),
-            "volume":data.get('volume',"+0%"),
-            "pitch":data.get('pitch',"+0Hz"),
-            "out_ext":data.get('out_ext',"mp3"),
-            "voice_autorate":bool(data.get('voice_autorate',False)) if is_srt else False,
+        cfg = {
+            "name": name,
+            "voice_role": data.get("voice_role"),
+            "target_language_code": data.get("target_language_code"),
+            "tts_type": int(data.get("tts_type", 0)),
+            "voice_rate": data.get("voice_rate", "+0%"),
+            "volume": data.get("volume", "+0%"),
+            "pitch": data.get("pitch", "+0Hz"),
+            "out_ext": data.get("out_ext", "mp3"),
+            "voice_autorate": (
+                bool(data.get("voice_autorate", False)) if is_srt else False
+            ),
         }
-        is_allow_lang=tts_model.is_allow_lang(langcode=cfg['target_language_code'],tts_type=cfg['tts_type'])
+        is_allow_lang = tts_model.is_allow_lang(
+            langcode=cfg["target_language_code"], tts_type=cfg["tts_type"]
+        )
         if is_allow_lang is not True:
-            return jsonify({"code":4,"msg":is_allow_lang})
-        is_input_api=tts_model.is_input_api(tts_type=cfg['tts_type'],return_str=True)
+            return jsonify({"code": 4, "msg": is_allow_lang})
+        is_input_api = tts_model.is_input_api(tts_type=cfg["tts_type"], return_str=True)
         if is_input_api is not True:
-            return jsonify({"code":5,"msg":is_input_api})
-
+            return jsonify({"code": 5, "msg": is_input_api})
 
         obj = tools.format_video(name, None)
-        obj['target_dir'] = TARGET_DIR + f'/{obj["uuid"]}'
-        obj['cache_folder'] = config.TEMP_DIR + f'/{obj["uuid"]}'
-        Path(obj['target_dir']).mkdir(parents=True, exist_ok=True)
+        obj["target_dir"] = TARGET_DIR + f'/{obj["uuid"]}'
+        obj["cache_folder"] = config.TEMP_DIR + f'/{obj["uuid"]}'
+        Path(obj["target_dir"]).mkdir(parents=True, exist_ok=True)
         cfg.update(obj)
 
-        config.box_tts = 'ing'
+        config.box_tts = "ing"
         trk = DubbingSrt(cfg)
         config.dubb_queue.append(trk)
-        tools.set_process(text=f"Currently in queue No.{len(config.dubb_queue)}",uuid=obj['uuid'])
-        return jsonify({'code': 0, 'task_id': obj['uuid']})
-
+        tools.set_process(
+            text=f"Currently in queue No.{len(config.dubb_queue)}", uuid=obj["uuid"]
+        )
+        return jsonify({"code": 0, "task_id": obj["uuid"]})
 
     # 第2个接口 /translate_srt
     """
@@ -186,44 +239,58 @@ if __name__ == '__main__':
     ```
     
     """
-    @app.route('/translate_srt', methods=['POST'])
+
+    @app.route("/translate_srt", methods=["POST"])
     def translate_srt():
         data = request.json
         # 从请求数据中获取参数
-        name = data.get('name', '').strip()
+        name = data.get("name", "").strip()
         if not name:
-            return jsonify({"code": 1, "msg": "The parameter name is not allowed to be empty"})
-        is_srt=True
-        if name.find("\n") == -1  and name.endswith('.srt'):
+            return jsonify(
+                {"code": 1, "msg": "The parameter name is not allowed to be empty"}
+            )
+        is_srt = True
+        if name.find("\n") == -1 and name.endswith(".srt"):
             if not Path(name).exists():
                 return jsonify({"code": 1, "msg": f"The file {name} is not exist"})
         else:
-            tmp_file = config.TEMP_DIR + f'/trans-srt-{time.time()}-{random.randint(1, 9999)}.srt'
-            is_srt=tools.is_srt_string(name)
-            Path(tmp_file).write_text(tools.process_text_to_srt_str(name) if not is_srt else name, encoding='utf-8')
+            tmp_file = (
+                config.TEMP_DIR
+                + f"/trans-srt-{time.time()}-{random.randint(1, 9999)}.srt"
+            )
+            is_srt = tools.is_srt_string(name)
+            Path(tmp_file).write_text(
+                tools.process_text_to_srt_str(name) if not is_srt else name,
+                encoding="utf-8",
+            )
             name = tmp_file
 
         cfg = {
-            "translate_type": int(data.get('translate_type', 0)),
+            "translate_type": int(data.get("translate_type", 0)),
             "text_list": tools.get_subtitle_from_srt(name),
-            "target_code": data.get('target_language'),
-            "source_code": data.get('source_code', '')
+            "target_code": data.get("target_language"),
+            "source_code": data.get("source_code", ""),
         }
-        is_allow=translator.is_allow_translate(translate_type=cfg['translate_type'],show_target=cfg['target_code'],return_str=True)
+        is_allow = translator.is_allow_translate(
+            translate_type=cfg["translate_type"],
+            show_target=cfg["target_code"],
+            return_str=True,
+        )
         if is_allow is not True:
-            return jsonify({"code":5,"msg":is_allow})
+            return jsonify({"code": 5, "msg": is_allow})
         obj = tools.format_video(name, None)
-        obj['target_dir'] = TARGET_DIR + f'/{obj["uuid"]}'
-        obj['cache_folder'] = config.TEMP_DIR + f'/{obj["uuid"]}'
-        Path(obj['target_dir']).mkdir(parents=True, exist_ok=True)
+        obj["target_dir"] = TARGET_DIR + f'/{obj["uuid"]}'
+        obj["cache_folder"] = config.TEMP_DIR + f'/{obj["uuid"]}'
+        Path(obj["target_dir"]).mkdir(parents=True, exist_ok=True)
         cfg.update(obj)
 
-        config.box_trans = 'ing'
+        config.box_trans = "ing"
         trk = TranslateSrt(cfg)
         config.trans_queue.append(trk)
-        tools.set_process(text=f"Currently in queue No.{len(config.trans_queue)}",uuid=obj['uuid'])
-        return jsonify({'code': 0, 'task_id': obj['uuid']})
-
+        tools.set_process(
+            text=f"Currently in queue No.{len(config.trans_queue)}", uuid=obj["uuid"]
+        )
+        return jsonify({"code": 0, "task_id": obj["uuid"]})
 
     # 第3个接口 /recogn
     """
@@ -261,44 +328,51 @@ if __name__ == '__main__':
         print(res.json())
     
     """
-    @app.route('/recogn', methods=['POST'])
+
+    @app.route("/recogn", methods=["POST"])
     def recogn():
         data = request.json
         # 从请求数据中获取参数
-        name = data.get('name', '').strip()
+        name = data.get("name", "").strip()
         if not name:
-            return jsonify({"code": 1, "msg": "The parameter name is not allowed to be empty"})
+            return jsonify(
+                {"code": 1, "msg": "The parameter name is not allowed to be empty"}
+            )
         if not Path(name).is_file():
             return jsonify({"code": 1, "msg": f"The file {name} is not exist"})
 
         cfg = {
-            "recogn_type": int(data.get('recogn_type', 0)),
-            "split_type": data.get('split_type', 'all'),
-            "model_name": data.get('model_name', 'tiny'),
-            "is_cuda": bool(data.get('is_cuda', False)),
-            "detect_language": data.get('detect_language', '')
+            "recogn_type": int(data.get("recogn_type", 0)),
+            "split_type": data.get("split_type", "all"),
+            "model_name": data.get("model_name", "tiny"),
+            "is_cuda": bool(data.get("is_cuda", False)),
+            "detect_language": data.get("detect_language", ""),
         }
 
-        is_allow=recognition.is_allow_lang(langcode=cfg['detect_language'],recogn_type=cfg['recogn_type'])
+        is_allow = recognition.is_allow_lang(
+            langcode=cfg["detect_language"], recogn_type=cfg["recogn_type"]
+        )
         if is_allow is not True:
-            return jsonify({"code":5,"msg":is_allow})
+            return jsonify({"code": 5, "msg": is_allow})
 
-        is_input=recognition.is_input_api(recogn_type=cfg['recogn_type'],return_str=True)
+        is_input = recognition.is_input_api(
+            recogn_type=cfg["recogn_type"], return_str=True
+        )
         if is_input is not True:
-            return jsonify({"code":5,"msg":is_input})
-
+            return jsonify({"code": 5, "msg": is_input})
 
         obj = tools.format_video(name, None)
-        obj['target_dir'] = TARGET_DIR + f'/{obj["uuid"]}'
-        obj['cache_folder'] = config.TEMP_DIR + f'/{obj["uuid"]}'
-        Path(obj['target_dir']).mkdir(parents=True, exist_ok=True)
+        obj["target_dir"] = TARGET_DIR + f'/{obj["uuid"]}'
+        obj["cache_folder"] = config.TEMP_DIR + f'/{obj["uuid"]}'
+        Path(obj["target_dir"]).mkdir(parents=True, exist_ok=True)
         cfg.update(obj)
-        config.box_recogn = 'ing'
+        config.box_recogn = "ing"
         trk = SpeechToText(cfg)
         config.prepare_queue.append(trk)
-        tools.set_process(text=f"Currently in queue No.{len(config.prepare_queue)}",uuid=obj['uuid'])
-        return jsonify({'code': 0, 'task_id': obj['uuid']})
-
+        tools.set_process(
+            text=f"Currently in queue No.{len(config.prepare_queue)}", uuid=obj["uuid"]
+        )
+        return jsonify({"code": 0, "task_id": obj["uuid"]})
 
     # 第4个接口
     """
@@ -369,128 +443,108 @@ if __name__ == '__main__':
         print(res.json())
     
     """
-    # 上传视频
-    UPLOAD_FOLDER =  os.path.join(os.path.expanduser("~"), 'Downloads', 'PyVideo')
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-    ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv'}
-    def allowed_file(filename):
-        return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-    @app.route('/upload', methods=['POST'])
-    def upload_file():
-        if 'file' not in request.files:
-            return jsonify({"code":0,"msg": "No file part"})
-        file = request.files['file']
-        if file.filename == '':
-            return jsonify({"code":0,"msg": "No selected file"})
-        if file and allowed_file(file.filename):
-            filename = file.filename
-            file_path = os.path.join(UPLOAD_FOLDER, filename)
-            file.save(file_path)
-            return jsonify({"code":0,"msg": "uploaded successfully", "file_path": file_path})
-        return jsonify({"code":1,"msg": "Invalid file type"})
-    
-    # 下载视频
-    @app.route('/download', methods=['GET'])
-    def download_file():
-        file_path = request.args.get('file_path')
-        
-        if file_path and os.path.exists(file_path):
-            # 获取文件名
-            filename = os.path.basename(file_path)
-            # 获取文件所在目录
-            directory = os.path.dirname(file_path)
-            return send_from_directory(directory, filename, as_attachment=True)
-        else:
-            return jsonify({"code":1,"msg": "文件不存在"})
-    
-    #视频翻译
-    @app.route('/trans_video', methods=['POST'])
+
+    # 视频翻译
+    @app.route("/trans_video", methods=["POST"])
     def trans_video():
         data = json.loads(request.json) if type(request.json) == str else request.json
-        name = data.get('name', '')
+        name = data.get("name", "")
         if not name:
-            return jsonify({"code": 1, "msg": "The parameter name is not allowed to be empty"})
+            name = _download_file(
+                data.get("object_key"), os.path.abspath(UPLOAD_FOLDER)
+            )
+            if not name:
+                return jsonify(
+                    {"code": 1, "msg": "The parameter name is not allowed to be empty"}
+                )
         if not Path(name).exists():
             return jsonify({"code": 1, "msg": f"The file {name} is not exist"})
 
         cfg = {
             # 通用
             "name": name,
-
-            "is_separate": bool(data.get('is_separate', False)),
-            "back_audio": data.get('back_audio', ''),
-
+            "is_separate": bool(data.get("is_separate", False)),
+            "back_audio": data.get("back_audio", ""),
             # 识别
-            "recogn_type": int(data.get('recogn_type', 0)),
-            "split_type": data.get('split_type','all'),
-            "model_name": data.get('model_name','tiny'),
-            "cuda": bool(data.get('is_cuda',False)),
-
+            "recogn_type": int(data.get("recogn_type", 0)),
+            "split_type": data.get("split_type", "all"),
+            "model_name": data.get("model_name", "tiny"),
+            "cuda": bool(data.get("is_cuda", False)),
             "subtitles": data.get("subtitles", ""),
-
             # 翻译
-            "translate_type": int(data.get('translate_type', 0)),
-            "target_language": data.get('target_language'),
-            "source_language": data.get('source_language'),
-
+            "translate_type": int(data.get("translate_type", 0)),
+            "target_language": data.get("target_language"),
+            "source_language": data.get("source_language"),
             # 配音
-            "tts_type": int(data.get('tts_type', 0)),
-            "voice_role": data.get('voice_role',''),
-            "voice_rate": data.get('voice_rate','+0%'),
-            "voice_autorate": bool(data.get('voice_autorate', False)),
-            "video_autorate": bool(data.get('video_autorate', False)),
-            "volume": data.get('volume','+0%'),
-            "pitch": data.get('pitch','+0Hz'),
-
-            "subtitle_type": int(data.get('subtitle_type', 0)),
-            "append_video": bool(data.get('append_video', False)),
-
+            "tts_type": int(data.get("tts_type", 0)),
+            "voice_role": data.get("voice_role", ""),
+            "voice_rate": data.get("voice_rate", "+0%"),
+            "voice_autorate": bool(data.get("voice_autorate", False)),
+            "video_autorate": bool(data.get("video_autorate", False)),
+            "volume": data.get("volume", "+0%"),
+            "pitch": data.get("pitch", "+0Hz"),
+            "subtitle_type": int(data.get("subtitle_type", 0)),
+            "append_video": bool(data.get("append_video", False)),
             "is_batch": True,
             "app_mode": "biaozhun",
-
-            "only_video": bool(data.get('only_video', False))
+            "only_video": bool(data.get("only_video", False)),
         }
         # 语音识别验证
-        if not cfg['subtitles']:
-            is_allow = recognition.is_allow_lang(langcode=cfg['target_language'], recogn_type=cfg['recogn_type'])
+        if not cfg["subtitles"]:
+            is_allow = recognition.is_allow_lang(
+                langcode=cfg["target_language"], recogn_type=cfg["recogn_type"]
+            )
             if is_allow is not True:
                 return jsonify({"code": 5, "msg": is_allow})
-            is_input = recognition.is_input_api(recogn_type=cfg['recogn_type'], return_str=True)
+            is_input = recognition.is_input_api(
+                recogn_type=cfg["recogn_type"], return_str=True
+            )
             if is_input is not True:
                 return jsonify({"code": 5, "msg": is_input})
-        
-        # 翻译验证 
-        if cfg['source_language'] != cfg['target_language']:
-            is_allow=translator.is_allow_translate(translate_type=cfg['translate_type'],show_target=cfg['target_language'],return_str=True)
+
+        # 翻译验证
+        if cfg["source_language"] != cfg["target_language"]:
+            is_allow = translator.is_allow_translate(
+                translate_type=cfg["translate_type"],
+                show_target=cfg["target_language"],
+                return_str=True,
+            )
             if is_allow is not True:
-                return jsonify({"code":5,"msg":is_allow})
-        
+                return jsonify({"code": 5, "msg": is_allow})
+
         # 配音验证
-        if (cfg['voice_role'] and 
-            cfg['voice_role'].strip().lower() != 'No' and 
-            cfg['target_language']):
-            is_allow_lang = tts_model.is_allow_lang(langcode=cfg['target_language'], tts_type=cfg['tts_type'])
+        if (
+            cfg["voice_role"]
+            and cfg["voice_role"].strip().lower() != "No"
+            and cfg["target_language"]
+        ):
+            is_allow_lang = tts_model.is_allow_lang(
+                langcode=cfg["target_language"], tts_type=cfg["tts_type"]
+            )
             if is_allow_lang is not True:
                 return jsonify({"code": 4, "msg": is_allow_lang})
-            is_input_api = tts_model.is_input_api(tts_type=cfg['tts_type'], return_str=True)
+            is_input_api = tts_model.is_input_api(
+                tts_type=cfg["tts_type"], return_str=True
+            )
             if is_input_api is not True:
                 return jsonify({"code": 5, "msg": is_input_api})
 
         obj = tools.format_video(name, None)
-        obj['target_dir'] = TARGET_DIR + f'/{obj["uuid"]}'
-        obj['cache_folder'] = config.TEMP_DIR + f'/{obj["uuid"]}'
-        Path(obj['target_dir']).mkdir(parents=True, exist_ok=True)
+        obj["target_dir"] = TARGET_DIR + f'/{obj["uuid"]}'
+        obj["cache_folder"] = config.TEMP_DIR + f'/{obj["uuid"]}'
+        Path(obj["target_dir"]).mkdir(parents=True, exist_ok=True)
         cfg.update(obj)
 
-        config.current_status = 'ing'
+        config.current_status = "ing"
         trk = TransCreate(cfg)
         config.prepare_queue.append(trk)
-        tools.set_process(text=f"Currently in queue No.{len(config.prepare_queue)}",uuid=obj['uuid'])
+        tools.set_process(
+            text=f"Currently in queue No.{len(config.prepare_queue)}", uuid=obj["uuid"]
+        )
 
-        return jsonify({'code': 0, 'task_id': obj['uuid']})
+        return jsonify({"code": 0, "task_id": obj["uuid"]})
 
-
-    # 获取任务进度
+    # 获取任务进度接口
     """
     根据任务id，获取当前任务的状态
     
@@ -543,41 +597,102 @@ if __name__ == '__main__':
       },
       "msg": "ok"
     }
-    
     """
-    @app.route('/task_status', methods=['POST', 'GET'])
+
+    @app.route("/task_status", methods=["POST", "GET"])
     def task_status():
         # 1. 优先从 GET 请求参数中获取 task_id
-        task_id = request.args.get('task_id')
-
+        task_id = request.args.get("task_id")
         # 2. 如果 GET 参数中没有 task_id，再从 POST 表单中获取
         if task_id is None:
-            task_id = request.form.get('task_id')
-
+            task_id = request.form.get("task_id")
         # 3. 如果 POST 表单中也没有 task_id，再从 JSON 请求体中获取
         if task_id is None and request.is_json:
-            task_id = request.json.get('task_id')
+            task_id = request.json.get("task_id")
         if not task_id:
             return jsonify({"code": 1, "msg": "The parem  task_id is not set"})
         return _get_task_data(task_id)
-        
 
-    
     # 获取多个任务 前台 content-type:application/json, 数据 {task_id_list:[id1,id2,....]}
-    @app.route('/task_status_list', methods=['POST', 'GET'])
+    @app.route("/task_status_list", methods=["POST", "GET"])
     def task_status_list():
         # 1. 优先从 GET 请求参数中获取 task_id
-        task_ids= request.json.get('task_id_list',[])
-        if not task_ids or len(task_ids)<1:
+        task_ids = request.json.get("task_id_list", [])
+        if not task_ids or len(task_ids) < 1:
             return jsonify({"code": 1, "msg": "缺少任务id"})
-        
-        return_data={}
+
+        return_data = {}
         for task_id in task_ids:
-            return_data[task_id]=_get_task_data(task_id)
-        return jsonify({"code": 0, "msg": "ok","data":return_data})
-    
+            return_data[task_id] = _get_task_data(task_id)
+        return jsonify({"code": 0, "msg": "ok", "data": return_data})
+
+    # 获取文件上传地址
+    @app.route("/get_upload_url", methods=["POST"])
+    def get_upload_url():
+        try:
+            file_name = request.json.get("fileName")
+            if not file_name:
+                return jsonify({"code": 1, "msg": "The file name does not exist"})
+            content_type = request.json.get("contentType")
+            content_type = content_type if content_type else "application/octet-stream"
+
+            # 获取文件扩展名
+            _, file_ext = os.path.splitext(file_name)
+            # 生成唯一文件名
+            object_key = str(uuid.uuid4())
+            # 生成预签名URL，有效期30分钟
+            headers = {"Content-Type": content_type, "x-oss-meta-file-ext": file_ext}
+            url = bucket.sign_url("PUT", object_key, 30 * 60, headers=headers)
+            return jsonify(
+                {
+                    "code": 0,
+                    "uploadUrl": url,
+                    "objectKey": object_key,
+                    "Content-Type": content_type,
+                    "x-oss-meta-file-ext": file_ext,
+                }
+            )
+        except Exception as e:
+            return jsonify({"code": 1, "msg": str(e)})
+
+    # 下载文件
+    def _download_file(object_key, path):
+        try:
+            meta = bucket.head_object(object_key)
+            # 读取存储的文件后缀
+            file_ext = meta.headers.get("x-oss-meta-file-ext", "")
+            print(f"file_ext:{file_ext}")
+            # 生成完整的文件路径
+            if os.path.isdir(path):
+                file_path = os.path.join(path, object_key + file_ext)
+            else:
+                file_path = path + file_ext
+            # 确保目标目录存在
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            print(f"file_path:{file_path}")
+            # 下载文件
+            bucket.get_object_to_file(object_key, file_path)
+            return file_path
+        except Exception as e:
+            print(e)
+            return None
+
+    # 上传文件
+    def _upload_file(file_path, content_type="application/octet-stream"):
+        try:
+            object_key = str(uuid.uuid4())
+            _, file_ext = os.path.splitext(file_path)
+            headers = {"Content-Type": content_type, "x-oss-meta-file-ext": file_ext}
+            # 执行上传
+            with open(file_path, "rb") as file:
+                bucket.put_object(object_key, file, headers=headers)
+            return {"object_key": object_key, "file_ext": file_ext}
+        except Exception as e:
+            print(f"上传失败：{e}")
+            return None
+
     def _get_task_data(task_id):
-        file = PROCESS_INFO + f'/{task_id}.json'
+        file = PROCESS_INFO + f"/{task_id}.json"
         if not Path(file).is_file():
             if task_id in config.uuid_logs_queue:
                 return {"code": -1, "msg": _get_order(task_id)}
@@ -585,64 +700,98 @@ if __name__ == '__main__':
             return {"code": 1, "msg": f"该任务 {task_id} 不存在"}
 
         try:
-            data = json.loads(Path(file).read_text(encoding='utf-8'))
+            data = json.loads(Path(file).read_text(encoding="utf-8"))
         except Exception as e:
-            return {"code": -1, "msg": Path(file).read_text(encoding='utf-8')}
+            return {"code": -1, "msg": Path(file).read_text(encoding="utf-8")}
 
-        if data['type'] == 'error':
+        if data["type"] == "error":
             return {"code": 3, "msg": data["text"]}
-        if data['type'] in logs_status_list:
-            text=data.get('text','').strip()
-            return {"code": -1, "msg": text if text else '等待处理中'}
+        if data["type"] in LOGS_STATUS_LIST:
+            text = data.get("text", "").strip()
+            return {"code": -1, "msg": text if text else "等待处理中"}
         # 完成，输出所有文件
-        file_list = _get_files_in_directory(f'{TARGET_DIR}/{task_id}')
+        file_list = _get_files_in_directory(f"{TARGET_DIR}/{task_id}")
         if len(file_list) < 1:
-            return {"code": 4, "msg": '未生成任何结果文件，可能出错了'}
+            return {"code": 4, "msg": "未生成任何结果文件，可能出错了"}
 
+        absolute_path = [f"{TARGET_DIR}/{task_id}/{name}" for name in file_list]
+        url = [
+            f"{request.scheme}://{request.host}/{API_RESOURCE}/{task_id}/{name}"
+            for name in file_list
+        ]
+
+        # 上传文件
+        mp4_files = [file for file in absolute_path if file.endswith(".mp4")]
+        oss_data = _upload_file(mp4_files[0], "video/mp4")
+        print(f"\noss_data:{oss_data}\n")
         return {
             "code": 0,
             "msg": "ok",
-            "data": {
-                "absolute_path": [f'{TARGET_DIR}/{task_id}/{name}' for name in file_list],
-                "url": [f'{request.scheme}://{request.host}/{API_RESOURCE}/{task_id}/{name}' for name in file_list],
-            }
+            "data": {"absolute_path": absolute_path, "url": url, "oss_data": oss_data},
         }
 
-    # 排队
     def _get_order(task_id):
-        order_num=0
+        order_num = 0
         for it in config.prepare_queue:
-            order_num+=1
+            order_num += 1
             if it.uuid == task_id:
-                return f'当前处于预处理队列第{order_num}位' if config.defaulelang=='zh' else f"No.{order_num} on perpare queue"
-        
-        order_num=0
+                return (
+                    f"当前处于预处理队列第{order_num}位"
+                    if config.defaulelang == "zh"
+                    else f"No.{order_num} on perpare queue"
+                )
+
+        order_num = 0
         for it in config.regcon_queue:
-            order_num+=1
+            order_num += 1
             if it.uuid == task_id:
-                return f'当前处于语音识别队列第{order_num}位' if config.defaulelang=='zh' else f"No.{order_num} on perpare queue"
-        order_num=0
+                return (
+                    f"当前处于语音识别队列第{order_num}位"
+                    if config.defaulelang == "zh"
+                    else f"No.{order_num} on perpare queue"
+                )
+        order_num = 0
         for it in config.trans_queue:
-            order_num+=1
+            order_num += 1
             if it.uuid == task_id:
-                return f'当前处于字幕翻译队列第{order_num}位' if config.defaulelang=='zh' else f"No.{order_num} on perpare queue"
-        order_num=0
+                return (
+                    f"当前处于字幕翻译队列第{order_num}位"
+                    if config.defaulelang == "zh"
+                    else f"No.{order_num} on perpare queue"
+                )
+        order_num = 0
         for it in config.dubb_queue:
-            order_num+=1
+            order_num += 1
             if it.uuid == task_id:
-                return f'当前处于配音队列第{order_num}位' if config.defaulelang=='zh' else f"No.{order_num} on perpare queue"
-        order_num=0
+                return (
+                    f"当前处于配音队列第{order_num}位"
+                    if config.defaulelang == "zh"
+                    else f"No.{order_num} on perpare queue"
+                )
+        order_num = 0
         for it in config.align_queue:
-            order_num+=1
+            order_num += 1
             if it.uuid == task_id:
-                return f'当前处于声画对齐队列第{order_num}位' if config.defaulelang=='zh' else f"No.{order_num} on perpare queue"
-        order_num=0
+                return (
+                    f"当前处于声画对齐队列第{order_num}位"
+                    if config.defaulelang == "zh"
+                    else f"No.{order_num} on perpare queue"
+                )
+        order_num = 0
         for it in config.assemb_queue:
-            order_num+=1
+            order_num += 1
             if it.uuid == task_id:
-                return f'当前处于输出整理队列第{order_num}位' if config.defaulelang=='zh' else f"No.{order_num} on perpare queue"
-        return '正在排队等待执行中，请稍后' if config.defaulelang=='zh' else f"Waiting in queue"
-    
+                return (
+                    f"当前处于输出整理队列第{order_num}位"
+                    if config.defaulelang == "zh"
+                    else f"No.{order_num} on perpare queue"
+                )
+        return (
+            "正在排队等待执行中，请稍后"
+            if config.defaulelang == "zh"
+            else f"Waiting in queue"
+        )
+
     def _get_files_in_directory(dirname):
         """
         使用 pathlib 库获取指定目录下的所有文件名，并返回一个文件名列表。
@@ -664,11 +813,13 @@ if __name__ == '__main__':
 
     def _listen_queue():
         # 监听队列日志 uuid_logs_queue 不在停止中的 stoped_uuid_set
-        Path(TARGET_DIR + f'/processinfo').mkdir(parents=True, exist_ok=True)
+        Path(TARGET_DIR + f"/processinfo").mkdir(parents=True, exist_ok=True)
         while 1:
             # 找出未停止的
             uuid_list = list(config.uuid_logs_queue.keys())
-            uuid_list = [uuid for uuid in uuid_list if uuid not in config.stoped_uuid_set]
+            uuid_list = [
+                uuid for uuid in uuid_list if uuid not in config.stoped_uuid_set
+            ]
             # 全部结束
             if len(uuid_list) < 1:
                 time.sleep(1)
@@ -685,25 +836,27 @@ if __name__ == '__main__':
                     if not data:
                         continue
 
-                    if data['type'] not in end_status_list + logs_status_list:
+                    if data["type"] not in END_STATUS_LIST + LOGS_STATUS_LIST:
                         continue
-                    with open(PROCESS_INFO + f'/{uuid}.json', 'w', encoding='utf-8') as f:
+                    with open(
+                        PROCESS_INFO + f"/{uuid}.json", "w", encoding="utf-8"
+                    ) as f:
                         f.write(json.dumps(data))
-                    if data['type'] in end_status_list:
+                    if data["type"] in END_STATUS_LIST:
                         config.stoped_uuid_set.add(uuid)
                         del config.uuid_logs_queue[uuid]
                 except Exception:
                     pass
             time.sleep(0.1)
 
-    multiprocessing.freeze_support()  # Windows 上需要这个来避免子进程的递归执行问题
-    print(f'Starting... API URL is   http://{HOST}:{PORT}')
-    print(f'Document at https://pyvideotrans.com/api-cn')
+    # Windows 上需要这个来避免子进程的递归执行问题
+    multiprocessing.freeze_support()
+    print(f"✅ Starting... API URL is   http://{HOST}:{PORT}\n")
     start_thread()
     threading.Thread(target=_listen_queue).start()
     try:
-        print(f'\nAPI URL is   http://{HOST}:{PORT}')
         serve(app, host=HOST, port=int(PORT))
     except Exception as e:
         import traceback
+
         traceback.print_exc()

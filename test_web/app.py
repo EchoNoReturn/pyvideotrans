@@ -15,6 +15,7 @@ def put_video(data: TransVideoReqData):
         msg: str = res.get("msg", "")
         if status == TaskStatus.SUCCESS:
             print("===== SUCCESS =====")
+            print(f"Response: {res}")
             return {
                 "absolute_path":  res.get('absolute_path', 'N/A'),
                 "url": res.get('url', 'N/A'),

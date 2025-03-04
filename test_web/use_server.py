@@ -4,6 +4,7 @@ import json
 
 from data_type.trans_video_req_data import TransVideoReqData
 
+
 class TaskStatus(enum.Enum):
     RUNNING = "RUNNING"
     SUCCESS = "SUCCESS"
@@ -28,7 +29,7 @@ class UsePyVideoServer(object):
         try:
             res_data = res.json()
             print(f"res_data:{res_data}")
-            return f"{res_data['task_id']}" if res_data['code'] == 0 else None
+            return f"{res_data['task_id']}" if res_data["code"] == 0 else None
         except Exception as e:
             print(e)
             return None
@@ -38,14 +39,15 @@ class UsePyVideoServer(object):
         url = self._get_req_url(f"task_status?task_id={task_id}")
         res = requests.get(url)
         res_data = res.json()
-        if res_data['code'] == 0:
+        if res_data["code"] == 0:
             return {
                 "status": TaskStatus.SUCCESS,
-                "msg": res_data['msg'],
-                "absolute_path": res_data['data']['absolute_path'],
-                "url":  res_data['data']['url'],
+                "msg": res_data["msg"],
+                "absolute_path": res_data["data"]["absolute_path"],
+                "url": res_data["data"]["url"],
+                "oss_data": res_data["data"]["oss_data"],
             }
-        elif res_data['code'] == -1:
-            return {"status": TaskStatus.RUNNING, "msg": res_data['msg']}
+        elif res_data["code"] == -1:
+            return {"status": TaskStatus.RUNNING, "msg": res_data["msg"]}
         else:
             return {"status": TaskStatus.FAILED, "msg": "操作失败"}
