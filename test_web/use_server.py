@@ -45,7 +45,8 @@ class UsePyVideoServer(object):
                 "msg": res_data["msg"],
                 "absolute_path": res_data["data"]["absolute_path"],
                 "url": res_data["data"]["url"],
-                "oss_data": res_data["data"]["oss_data"],
+                "signed_url": res_data["data"]["signed_url"],
+                "file_ext": res_data["data"]["file_ext"],
             }
         elif res_data["code"] == -1:
             return {"status": TaskStatus.RUNNING, "msg": res_data["msg"]}

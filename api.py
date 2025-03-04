@@ -10,7 +10,6 @@ if __name__ == "__main__":
     import json
     import oss2
     import uuid
-    import mimetypes
 
     from pathlib import Path
     from flask import Flask, request, jsonify, send_from_directory
@@ -25,6 +24,7 @@ if __name__ == "__main__":
     from videotrans.util import tools
     from videotrans import tts as tts_model, translator, recognition
     from oss2.exceptions import OssError
+    from datetime import datetime, timedelta
 
     ####### 配置信息
     config.exec_mode = "api"
@@ -678,7 +678,9 @@ if __name__ == "__main__":
             return None
 
     # 上传文件
-    def _upload_file(file_path, content_type="application/octet-stream"):
+    def _upload_file(
+        file_path, content_type="application/octet-stream", expire_time=3600
+    ):
         try:
             object_key = str(uuid.uuid4())
             _, file_ext = os.path.splitext(file_path)
@@ -686,7 +688,9 @@ if __name__ == "__main__":
             # 执行上传
             with open(file_path, "rb") as file:
                 bucket.put_object(object_key, file, headers=headers)
-            return {"object_key": object_key, "file_ext": file_ext}
+            # 生成预签名 URL
+            signed_url = bucket.sign_url("GET", object_key, expire_time)
+            return {"signed_url": signed_url, "file_ext": file_ext}
         except Exception as e:
             print(f"上传失败：{e}")
             return None
@@ -727,7 +731,12 @@ if __name__ == "__main__":
         return {
             "code": 0,
             "msg": "ok",
-            "data": {"absolute_path": absolute_path, "url": url, "oss_data": oss_data},
+            "data": {
+                "absolute_path": absolute_path,
+                "url": url,
+                "signed_url": oss_data["signed_url"],
+                "file_ext": oss_data["file_ext"],
+            },
         }
 
     def _get_order(task_id):
