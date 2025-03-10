@@ -10,7 +10,7 @@ from videotrans.configure import config
 from videotrans.tts._base import BaseTTS
 from videotrans.util import tools
 
-  
+
 # 线程池并发 返回wav数据转为mp3
 class CosyVoice(BaseTTS):
 
@@ -84,8 +84,6 @@ class CosyVoice(BaseTTS):
                             else "No reference audio exists and cannot use clone function"
                         )
                         return
-                    audio_chunk = AudioSegment.from_wav(data_item["ref_wav"])
-
                     # 克隆音色
                     data["reference_audio"] = self._audio_to_base64(
                         data_item["ref_wav"]

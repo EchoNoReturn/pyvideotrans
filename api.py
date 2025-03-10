@@ -144,7 +144,6 @@ if __name__ == "__main__":
         print(res.json())
     ```
     """
-
     @app.route("/tts", methods=["POST"])
     def tts():
         data = request.json
@@ -160,8 +159,8 @@ if __name__ == "__main__":
                 return jsonify({"code": 1, "msg": f"The file {name} is not exist"})
         else:
             tmp_file = (
-                config.TEMP_DIR
-                + f"/tts-srt-{time.time()}-{random.randint(1, 9999)}.srt"
+                    config.TEMP_DIR
+                    + f"/tts-srt-{time.time()}-{random.randint(1, 9999)}.srt"
             )
             is_srt = tools.is_srt_string(name)
             Path(tmp_file).write_text(
@@ -206,6 +205,7 @@ if __name__ == "__main__":
         )
         return jsonify({"code": 0, "task_id": obj["uuid"]})
 
+
     # 第2个接口 /translate_srt
     """
     字幕翻译接口
@@ -239,7 +239,6 @@ if __name__ == "__main__":
     ```
     
     """
-
     @app.route("/translate_srt", methods=["POST"])
     def translate_srt():
         data = request.json
@@ -255,8 +254,8 @@ if __name__ == "__main__":
                 return jsonify({"code": 1, "msg": f"The file {name} is not exist"})
         else:
             tmp_file = (
-                config.TEMP_DIR
-                + f"/trans-srt-{time.time()}-{random.randint(1, 9999)}.srt"
+                    config.TEMP_DIR
+                    + f"/trans-srt-{time.time()}-{random.randint(1, 9999)}.srt"
             )
             is_srt = tools.is_srt_string(name)
             Path(tmp_file).write_text(
@@ -291,6 +290,7 @@ if __name__ == "__main__":
             text=f"Currently in queue No.{len(config.trans_queue)}", uuid=obj["uuid"]
         )
         return jsonify({"code": 0, "task_id": obj["uuid"]})
+
 
     # 第3个接口 /recogn
     """
@@ -328,6 +328,7 @@ if __name__ == "__main__":
         print(res.json())
     
     """
+
 
     @app.route("/recogn", methods=["POST"])
     def recogn():
@@ -373,6 +374,7 @@ if __name__ == "__main__":
             text=f"Currently in queue No.{len(config.prepare_queue)}", uuid=obj["uuid"]
         )
         return jsonify({"code": 0, "task_id": obj["uuid"]})
+
 
     # 第4个接口
     """
@@ -444,6 +446,7 @@ if __name__ == "__main__":
     
     """
 
+
     # 视频翻译
     @app.route("/trans_video", methods=["POST"])
     def trans_video():
@@ -478,6 +481,7 @@ if __name__ == "__main__":
             # 配音
             "tts_type": int(data.get("tts_type", 0)),
             "voice_role": data.get("voice_role", ""),
+            "refer_text": data.get("refer_text", ""),
             "voice_rate": data.get("voice_rate", "+0%"),
             "voice_autorate": bool(data.get("voice_autorate", False)),
             "video_autorate": bool(data.get("video_autorate", False)),
@@ -514,9 +518,9 @@ if __name__ == "__main__":
 
         # 配音验证
         if (
-            cfg["voice_role"]
-            and cfg["voice_role"].strip().lower() != "No"
-            and cfg["target_language"]
+                cfg["voice_role"]
+                and cfg["voice_role"].strip().lower() != "No"
+                and cfg["target_language"]
         ):
             is_allow_lang = tts_model.is_allow_lang(
                 langcode=cfg["target_language"], tts_type=cfg["tts_type"]
@@ -543,6 +547,7 @@ if __name__ == "__main__":
         )
 
         return jsonify({"code": 0, "task_id": obj["uuid"]})
+
 
     # 获取任务进度接口
     """
@@ -599,6 +604,7 @@ if __name__ == "__main__":
     }
     """
 
+
     @app.route("/task_status", methods=["POST", "GET"])
     def task_status():
         # 1. 优先从 GET 请求参数中获取 task_id
@@ -613,6 +619,7 @@ if __name__ == "__main__":
             return jsonify({"code": 1, "msg": "The parem  task_id is not set"})
         return _get_task_data(task_id)
 
+
     # 获取多个任务 前台 content-type:application/json, 数据 {task_id_list:[id1,id2,....]}
     @app.route("/task_status_list", methods=["POST", "GET"])
     def task_status_list():
@@ -625,6 +632,7 @@ if __name__ == "__main__":
         for task_id in task_ids:
             return_data[task_id] = _get_task_data(task_id)
         return jsonify({"code": 0, "msg": "ok", "data": return_data})
+
 
     # 获取文件上传地址
     @app.route("/get_upload_url", methods=["POST"])
@@ -655,6 +663,7 @@ if __name__ == "__main__":
         except Exception as e:
             return jsonify({"code": 1, "msg": str(e)})
 
+
     # 下载文件
     def _download_file(object_key, path):
         try:
@@ -677,9 +686,10 @@ if __name__ == "__main__":
             print(e)
             return None
 
+
     # 上传文件
     def _upload_file(
-        file_path, content_type="application/octet-stream", expire_time=3600
+            file_path, content_type="application/octet-stream", expire_time=3600
     ):
         try:
             object_key = str(uuid.uuid4())
@@ -694,6 +704,7 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"上传失败：{e}")
             return None
+
 
     def _get_task_data(task_id):
         file = PROCESS_INFO + f"/{task_id}.json"
@@ -738,6 +749,7 @@ if __name__ == "__main__":
                 "file_ext": oss_data["file_ext"],
             },
         }
+
 
     def _get_order(task_id):
         order_num = 0
@@ -801,6 +813,7 @@ if __name__ == "__main__":
             else f"Waiting in queue"
         )
 
+
     def _get_files_in_directory(dirname):
         """
         使用 pathlib 库获取指定目录下的所有文件名，并返回一个文件名列表。
@@ -819,6 +832,7 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"Error while accessing directory {dirname}: {e}")
             return []
+
 
     def _listen_queue():
         # 监听队列日志 uuid_logs_queue 不在停止中的 stoped_uuid_set
@@ -848,7 +862,7 @@ if __name__ == "__main__":
                     if data["type"] not in END_STATUS_LIST + LOGS_STATUS_LIST:
                         continue
                     with open(
-                        PROCESS_INFO + f"/{uuid}.json", "w", encoding="utf-8"
+                            PROCESS_INFO + f"/{uuid}.json", "w", encoding="utf-8"
                     ) as f:
                         f.write(json.dumps(data))
                     if data["type"] in END_STATUS_LIST:
@@ -857,6 +871,7 @@ if __name__ == "__main__":
                 except Exception:
                     pass
             time.sleep(0.1)
+
 
     # Windows 上需要这个来避免子进程的递归执行问题
     multiprocessing.freeze_support()

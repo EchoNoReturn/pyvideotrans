@@ -14,22 +14,21 @@ class BaseTask(BaseCon):
         # 任务id
         super().__init__()
         # 配置信息
-        self.cfg=cfg
+        self.cfg = cfg
         if obj:
             self.cfg.update(obj)
         # 名字规范化处理后，应该删除的
-        self.shound_del_name=None
-        if "uuid" in self.cfg and self.cfg['uuid']:
-            self.uuid = self.cfg['uuid']
+        self.shound_del_name = None
+        if "uuid" in self.cfg and self.cfg["uuid"]:
+            self.uuid = self.cfg["uuid"]
 
         # 进度
         self.precent = 1
-        self.status_text = config.transobj['ing']
+        self.status_text = config.transobj["ing"]
         # 存储处理好待配音信息
         self.queue_tts = []
         # 本次任务结束标识
         self.hasend = False
-
 
         # 预处理，prepare 全部需要
         self.shound_del = False
@@ -45,11 +44,9 @@ class BaseTask(BaseCon):
         self.shoud_hebing = False
         # 最后一步hebing move_emd 全部需要
 
-
     # 预先处理，例如从视频中拆分音频、人声背景分离、转码等
     def prepare(self):
         pass
-
 
     # 语音识别创建原始语言字幕
     def recogn(self):
@@ -103,11 +100,13 @@ class BaseTask(BaseCon):
             tools.save_srt(srtstr, file)
         except Exception as e:
             raise
-        self._signal(text=Path(file).read_text(encoding='utf-8'), type='replace_subtitle')
+        self._signal(
+            text=Path(file).read_text(encoding="utf-8"), type="replace_subtitle"
+        )
         return True
 
     # 完整流程判断是否需退出，子功能需重写
     def _exit(self):
-        if config.exit_soft or config.current_status != 'ing':
+        if config.exit_soft or config.current_status != "ing":
             return True
         return False

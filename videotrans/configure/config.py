@@ -10,30 +10,32 @@ import tempfile
 from pathlib import Path
 from queue import Queue
 
-MAINWIN=None
+MAINWIN = None
+
 
 # 获取程序执行目录
 def _get_executable_path():
-    if getattr(sys, 'frozen', False):
+    if getattr(sys, "frozen", False):
         # 如果程序是被“冻结”打包的，使用这个路径
         return Path(sys.executable).parent.as_posix()
     else:
         return Path(__file__).parent.parent.parent.as_posix()
 
-SYS_TMP=Path(tempfile.gettempdir()).as_posix()
+
+SYS_TMP = Path(tempfile.gettempdir()).as_posix()
 
 # 程序根目录
 ROOT_DIR = _get_executable_path()
 
 _root_path = Path(ROOT_DIR)
 
-_tmpname = f'tmp'
+_tmpname = f"tmp"
 # 程序根下临时目录tmp
 _temp_path = _root_path / _tmpname
 _temp_path.mkdir(parents=True, exist_ok=True)
 
 TEMP_DIR = _temp_path.as_posix()
-Path(TEMP_DIR+'/dubbing_cache').mkdir(exist_ok=True)
+Path(TEMP_DIR + "/dubbing_cache").mkdir(exist_ok=True)
 
 # 日志目录 logs
 _logs_path = _root_path / "logs"
@@ -64,43 +66,36 @@ MODELS_DOWNLOAD = {
         "tiny.en": "https://github.com/jianchang512/stt/releases/download/0.0/faster-tiny.en.7z",
         "base": "https://github.com/jianchang512/stt/releases/download/0.0/faster-base.7z",
         "base.en": "https://github.com/jianchang512/stt/releases/download/0.0/faster-base.en.7z",
-
         "small": "https://github.com/jianchang512/stt/releases/download/0.0/faster-small.7z",
         "small.en": "https://github.com/jianchang512/stt/releases/download/0.0/faster-small.en.7z",
-
         "medium": "https://github.com/jianchang512/stt/releases/download/0.0/faster-medium.7z",
         "medium.en": "https://github.com/jianchang512/stt/releases/download/0.0/faster-medium.en.7z",
-
         "large-v1": "https://huggingface.co/spaces/mortimerme/s4/resolve/main/faster-large-v1.7z?download=true",
-
         "large-v2": "https://huggingface.co/spaces/mortimerme/s4/resolve/main/largev2-jieyao-dao-models.7z",
-
         "large-v3": "https://huggingface.co/spaces/mortimerme/s4/resolve/main/faster-largev3.7z?download=true",
         "large-v3-turbo": "https://github.com/jianchang512/stt/releases/download/0.0/faster-large-v3-turbo.7z",
-
         "distil-whisper-small.en": "https://github.com/jianchang512/stt/releases/download/0.0/distil-whisper-small.en.7z",
-
         "distil-whisper-medium.en": "https://github.com/jianchang512/stt/releases/download/0.0/distil-whisper-medium.en.7z",
-
         "distil-whisper-large-v2": "https://github.com/jianchang512/stt/releases/download/0.0/distil-whisper-large-v2.7z",
-
-        "distil-whisper-large-v3": "https://github.com/jianchang512/stt/releases/download/0.0/distil-whisper-large-v3.7z"
-    }
+        "distil-whisper-large-v3": "https://github.com/jianchang512/stt/releases/download/0.0/distil-whisper-large-v3.7z",
+    },
 }
 
 ###################################
 
-logger = logging.getLogger('VideoTrans')
+logger = logging.getLogger("VideoTrans")
 logger.setLevel(logging.INFO)
 # 创建文件处理器，并设置级别G
-_file_handler = logging.FileHandler(f'{ROOT_DIR}/logs/{datetime.datetime.now().strftime("%Y%m%d")}.log',
-                                    encoding='utf-8')
+_file_handler = logging.FileHandler(
+    f'{ROOT_DIR}/logs/{datetime.datetime.now().strftime("%Y%m%d")}.log',
+    encoding="utf-8",
+)
 _file_handler.setLevel(logging.INFO)
 # 创建控制台处理器，并设置级别
 _console_handler = logging.StreamHandler(sys.stdout)
 _console_handler.setLevel(logging.WARNING)
 # 设置日志格式
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 _file_handler.setFormatter(formatter)
 _console_handler.setFormatter(formatter)
 # 添加处理器到日志记录器
@@ -123,17 +118,17 @@ sys.excepthook = _log_uncaught_exceptions
 FFMPEG_BIN = "ffmpeg"
 FFPROBE_BIN = "ffprobe"
 # ffmpeg
-if sys.platform == 'win32':
-    os.environ['PATH'] = ROOT_DIR + f';{ROOT_DIR}/ffmpeg;' + os.environ['PATH']
+if sys.platform == "win32":
+    os.environ["PATH"] = ROOT_DIR + f";{ROOT_DIR}/ffmpeg;" + os.environ["PATH"]
 else:
-    os.environ['PATH'] = ROOT_DIR + f':{ROOT_DIR}/ffmpeg:' + os.environ['PATH']
+    os.environ["PATH"] = ROOT_DIR + f":{ROOT_DIR}/ffmpeg:" + os.environ["PATH"]
 
 
-os.environ['QT_API'] = 'pyside6'
-os.environ['SOFT_NAME'] = 'pyvideotrans'
-os.environ['MODELSCOPE_CACHE'] = ROOT_DIR + "/models"
-os.environ['HF_HOME'] = ROOT_DIR + "/models"
-os.environ['HF_HUB_DISABLE_SYMLINKS_WARNING'] = 'true'
+os.environ["QT_API"] = "pyside6"
+os.environ["SOFT_NAME"] = "pyvideotrans"
+os.environ["MODELSCOPE_CACHE"] = ROOT_DIR + "/models"
+os.environ["HF_HOME"] = ROOT_DIR + "/models"
+os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "true"
 ####################################
 # 存储所有任务的进度队列，以uuid为键
 # 根据uuid将日志进度等信息存入队列，如果不存在则创建
@@ -166,7 +161,7 @@ exit_soft = False
 child_forms = {}
 
 # info form
-INFO_WIN={"data":{},"win":None}
+INFO_WIN = {"data": {}, "win": None}
 
 # 存放视频分离为无声视频进度，noextname为key，用于判断某个视频是否是否已预先创建好 novice_mp4, “ing”=需等待，end=成功完成，error=出错了
 queue_novice = {}
@@ -180,7 +175,7 @@ box_trans = "stop"
 # 工具箱tts状态
 box_tts = "stop"
 # 工具箱识别状态
-box_recogn = 'stop'
+box_recogn = "stop"
 
 # 倒计时数秒
 task_countdown = 0
@@ -201,25 +196,24 @@ assemb_queue = []
 
 
 # 执行模式 gui 或 api
-exec_mode="gui"
+exec_mode = "gui"
 
 # funasr模型
-FUNASR_MODEL=['paraformer-zh','SenseVoiceSmall']
-DEEPGRAM_MODEL=[
-            "whisper-large",
-            "whisper-medium",
-            "whisper-small",
-            "whisper-base",
-            "whisper-tiny",
-            "nova-2-general",
-            "enhanced-2-general",
-            "base-2-general",
-
-        ]
+FUNASR_MODEL = ["paraformer-zh", "SenseVoiceSmall"]
+DEEPGRAM_MODEL = [
+    "whisper-large",
+    "whisper-medium",
+    "whisper-small",
+    "whisper-base",
+    "whisper-tiny",
+    "nova-2-general",
+    "enhanced-2-general",
+    "base-2-general",
+]
 
 
 # 支持的视频格式
-VIDEO_EXTS = ["mp4", "mkv", "mpeg", "avi", "mov","mts"]
+VIDEO_EXTS = ["mp4", "mkv", "mpeg", "avi", "mov", "mts"]
 # 支持的音频格式
 AUDIO_EXITS = ["mp3", "wav", "aac", "flac", "m4a"]
 
@@ -231,7 +225,7 @@ video_codec = None
 edgeTTS_rolelist = None
 AzureTTS_rolelist = None
 
-line_roles={}
+line_roles = {}
 
 # 语言
 try:
@@ -242,62 +236,53 @@ except Exception:
 
 # 设置默认高级参数值
 def parse_init():
-    _defaulthomedir = (Path.home() / 'Videos/pyvideotrans').as_posix()
+    _defaulthomedir = (Path.home() / "Videos/pyvideotrans").as_posix()
     try:
         Path(_defaulthomedir).mkdir(parents=True, exist_ok=True)
     except:
-        _defaulthomedir=ROOT_DIR+'/hometemp'
+        _defaulthomedir = ROOT_DIR + "/hometemp"
         Path(_defaulthomedir).mkdir(parents=True, exist_ok=True)
-        
+
     default = {
         "ai302_models": "gpt-4o-mini,gpt-4o,gpt-4,gpt-4-turbo-preview,ernie-4.0-8k,qwen-max,glm-4,moonshot-v1-8k,"
-                        "yi-large,deepseek-chat,doubao-pro-128k,generalv3.5,gemini-1.5-pro,baichuan2-53b,sensechat-5,"
-                        "llama3-70b-8192,qwen2-72b-instruct",
+        "yi-large,deepseek-chat,doubao-pro-128k,generalv3.5,gemini-1.5-pro,baichuan2-53b,sensechat-5,"
+        "llama3-70b-8192,qwen2-72b-instruct",
         "ai302tts_models": "tts-1,tts-1-hd,azure,doubao",
         "homedir": _defaulthomedir,
         "lang": "",
-        "is_queue":False,
-        
-        "Faster_Whisper_XXL":"",
-
+        "is_queue": False,
+        "Faster_Whisper_XXL": "",
         "crf": 23,
         "cuda_qp": False,
-        "cuda_decode":False,
-        
-        "videoslow_hard":True,
-        
+        "cuda_decode": False,
+        "videoslow_hard": True,
         "preset": "fast",
         "ffmpeg_cmd": "",
-        "aisendsrt":False,
+        "aisendsrt": False,
         "video_codec": 264,
         "openaitts_model": "tts-1,tts-1-hd",
         "openairecognapi_model": "whisper-1",
         "chatgpt_model": "gpt-4o-mini,gpt-4o,gpt-4,gpt-4-turbo,gpt-4-turbo-preview,qwen,moonshot-v1-8k,deepseek-chat",
-        "claude_model":"claude-3-5-sonnet-latest,claude-3-5-sonnet-20241022,claude-3-opus-latest,claude-3-sonnet-20240229,claude-3-haiku-20240307",
+        "claude_model": "claude-3-5-sonnet-latest,claude-3-5-sonnet-20241022,claude-3-opus-latest,claude-3-sonnet-20240229,claude-3-haiku-20240307",
         "azure_model": "gpt-4o,gpt-4,gpt-35-turbo",
         "localllm_model": "qwen:7b,qwen:1.8b-chat-v1.5-q2_k,moonshot-v1-8k,deepseek-chat",
         "zijiehuoshan_model": "",
         "model_list": "tiny,tiny.en,base,base.en,small,small.en,medium,medium.en,large-v1,large-v2,large-v3,large-v3-turbo,distil-whisper-small.en,distil-whisper-medium.en,distil-whisper-large-v2,distil-whisper-large-v3",
         "audio_rate": 3,
         "video_rate": 20,
-        "video_goback":1,
+        "video_goback": 1,
         "remove_silence": False,
         "remove_srt_silence": False,
         "remove_white_ms": 0,
         "force_edit_srt": True,
         "vad": True,
-
-        "threshold":0.5,
-        "min_speech_duration_ms":250,
-        "max_speech_duration_s":0,
-        "min_silence_duration_ms":250,
-        "speech_pad_ms":150,
-
-
-        "overall_maxsecs":12,
-
-        "rephrase":False,
-
+        "threshold": 0.5,
+        "min_speech_duration_ms": 250,
+        "max_speech_duration_s": 0,
+        "min_silence_duration_ms": 250,
+        "speech_pad_ms": 150,
+        "overall_maxsecs": 12,
+        "rephrase": False,
         "voice_silence": 200,
         "interval_split": 10,
         "bgm_split_time": 300,
@@ -357,16 +342,17 @@ def parse_init():
         "azure_lines": 150,
         "chattts_voice": "11,12,16,2222,4444,6653,7869,9999,5,13,14,1111,3333,4099,5099,5555,8888,6666,7777",
         "google_trans_newadd": "",
-        "proxy":"",
-        "refine3":False      
-        
+        "proxy": "",
+        "refine3": False,
     }
-    if not os.path.exists(ROOT_DIR + "/videotrans/cfg.json"):        
-        with open(ROOT_DIR + '/videotrans/cfg.json', 'w', encoding='utf-8') as f:
-            f.write(json.dumps(default , ensure_ascii=False))
+    if not os.path.exists(ROOT_DIR + "/videotrans/cfg.json"):
+        with open(ROOT_DIR + "/videotrans/cfg.json", "w", encoding="utf-8") as f:
+            f.write(json.dumps(default, ensure_ascii=False))
         return default
     try:
-        temp_json = json.loads(Path(ROOT_DIR + "/videotrans/cfg.json").read_text(encoding='utf-8'))
+        temp_json = json.loads(
+            Path(ROOT_DIR + "/videotrans/cfg.json").read_text(encoding="utf-8")
+        )
     except Exception as e:
         return default
     else:
@@ -375,51 +361,53 @@ def parse_init():
             if key not in default:
                 continue
             value = str(val).strip()
-            if re.match(r'^\d+$', value):
+            if re.match(r"^\d+$", value):
                 _settings[key] = int(value)
-            elif re.match(r'^\d*\.\d+$', value):
+            elif re.match(r"^\d*\.\d+$", value):
                 _settings[key] = float(value)
-            elif value.lower() == 'true':
+            elif value.lower() == "true":
                 _settings[key] = True
-            elif value.lower() == 'false':
+            elif value.lower() == "false":
                 _settings[key] = False
             elif value:
                 _settings[key] = value
-        if _settings['model_list'].find('large-v3-turbo') == -1:
-            _settings['model_list']=_settings['model_list'].replace(',large-v3,',',large-v3,large-v3-turbo,')
-        if _settings['gemini_model'].find('gemini') == -1:
+        if _settings["model_list"].find("large-v3-turbo") == -1:
+            _settings["model_list"] = _settings["model_list"].replace(
+                ",large-v3,", ",large-v3,large-v3-turbo,"
+            )
+        if _settings["gemini_model"].find("gemini") == -1:
             _settings["gemini_model"] = "gemini-pro,gemini-1.5-pro,gemini-1.5-flash"
         default.update(_settings)
         default["ai302tts_models"] = "tts-1,tts-1-hd,azure,doubao"
-        if not default['homedir']:
-            default['homedir'] = _defaulthomedir
-        Path(default['homedir']).mkdir(parents=True, exist_ok=True)
-        with open(ROOT_DIR + '/videotrans/cfg.json', 'w', encoding='utf-8') as f:
-            f.write(json.dumps(default,ensure_ascii=False))
+        if not default["homedir"]:
+            default["homedir"] = _defaulthomedir
+        Path(default["homedir"]).mkdir(parents=True, exist_ok=True)
+        with open(ROOT_DIR + "/videotrans/cfg.json", "w", encoding="utf-8") as f:
+            f.write(json.dumps(default, ensure_ascii=False))
         return default
 
 
 # 高级选项信息
 settings = parse_init()
 # 家目录
-HOME_DIR = settings['homedir']
+HOME_DIR = settings["homedir"]
 # 家目录下的临时文件存储目录
-TEMP_HOME = settings['homedir'] + f"/{_tmpname}"
+TEMP_HOME = settings["homedir"] + f"/{_tmpname}"
 Path(TEMP_HOME).mkdir(parents=True, exist_ok=True)
 
-copying=False
+copying = False
 
 # default language 如果 ini中设置了，则直接使用，否则自动判断
-if settings['lang']:
-    defaulelang = settings['lang'].lower()
+if settings["lang"]:
+    defaulelang = settings["lang"].lower()
 
 # 语言代码文件是否存在##############################
-_lang_path = _root_path / f'videotrans/language/{defaulelang}.json'
+_lang_path = _root_path / f"videotrans/language/{defaulelang}.json"
 if not _lang_path.exists():
     defaulelang = "en"
-    _lang_path = _root_path / f'videotrans/language/{defaulelang}.json'
+    _lang_path = _root_path / f"videotrans/language/{defaulelang}.json"
 
-_obj = json.loads(_lang_path.read_text(encoding='utf-8'))
+_obj = json.loads(_lang_path.read_text(encoding="utf-8"))
 # 交互语言代码
 transobj = _obj["translate_language"]
 # 软件界面
@@ -431,26 +419,36 @@ rev_langlist = {code_alias: code for code, code_alias in langlist.items()}
 # 语言显示名称 list
 langnamelist = list(langlist.values())
 # 工具箱语言
-box_lang = _obj['toolbox_lang']
-proxy=settings.get('proxy','')
+box_lang = _obj["toolbox_lang"]
+proxy = settings.get("proxy", "")
 #############################################
 # openai  faster-whisper 识别模型
-WHISPER_MODEL_LIST = re.split(r'[,，]', settings['model_list'])
+WHISPER_MODEL_LIST = re.split(r"[,，]", settings["model_list"])
 
-ChatTTS_voicelist = re.split(r'[,，]', str(settings['chattts_voice']))
-_chatgpt_model_list = [it.strip() for it in settings['chatgpt_model'].split(',') if it.strip()]
-_claude_model_list = [it.strip() for it in settings['claude_model'].split(',') if it.strip()]
-_azure_model_list = [it.strip() for it in settings['azure_model'].split(',') if it.strip()]
-_localllm_model_list = [it.strip() for it in settings['localllm_model'].split(',') if it.strip()]
-_zijiehuoshan_model_list = [it.strip() for it in settings['zijiehuoshan_model'].split(',') if it.strip()]
+ChatTTS_voicelist = re.split(r"[,，]", str(settings["chattts_voice"]))
+_chatgpt_model_list = [
+    it.strip() for it in settings["chatgpt_model"].split(",") if it.strip()
+]
+_claude_model_list = [
+    it.strip() for it in settings["claude_model"].split(",") if it.strip()
+]
+_azure_model_list = [
+    it.strip() for it in settings["azure_model"].split(",") if it.strip()
+]
+_localllm_model_list = [
+    it.strip() for it in settings["localllm_model"].split(",") if it.strip()
+]
+_zijiehuoshan_model_list = [
+    it.strip() for it in settings["zijiehuoshan_model"].split(",") if it.strip()
+]
 if len(_chatgpt_model_list) < 1:
-    _chatgpt_model_list = ['']
+    _chatgpt_model_list = [""]
 if len(_claude_model_list) < 1:
-    _claude_model_list = ['']
+    _claude_model_list = [""]
 if len(_localllm_model_list) < 1:
-    _localllm_model_list = ['']
+    _localllm_model_list = [""]
 if len(_zijiehuoshan_model_list) < 1:
-    _zijiehuoshan_model_list = ['']
+    _zijiehuoshan_model_list = [""]
 
 
 # 设置或获取 config.params
@@ -511,7 +509,7 @@ Output format:
 <TRANSLATE_TEXT>[Translated text here]</TRANSLATE_TEXT>
 
 """
-    prompt_zh_srt="""请将<SOURCE_TEXT>中的srt格式字幕内容翻译到{lang}，然后只输出译文，不要添加任何说明或引导词：
+    prompt_zh_srt = """请将<SOURCE_TEXT>中的srt格式字幕内容翻译到{lang}，然后只输出译文，不要添加任何说明或引导词：
 
 ## 请严格遵守以下要求：
 
@@ -530,7 +528,7 @@ Output format:
 <TRANSLATE_TEXT>[这里是翻译结果]</TRANSLATE_TEXT>
 
 """
-    prompt_en_srt="""Please translate the srt format subtitle content in <SOURCE_TEXT> to {lang}, and then output only the translated text without adding any description or guide words:
+    prompt_en_srt = """Please translate the srt format subtitle content in <SOURCE_TEXT> to {lang}, and then output only the translated text without adding any description or guide words:
 
 ## Please strictly observe the following requirements:
 
@@ -549,28 +547,23 @@ Output format:
 <TRANSLATE_TEXT>[Here is the translation result]</TRANSLATE_TEXT>"""
     # 保存到json
     if obj is not None:
-        with open(ROOT_DIR + "/videotrans/params.json", 'w', encoding='utf-8') as f:
+        with open(ROOT_DIR + "/videotrans/params.json", "w", encoding="utf-8") as f:
             f.write(json.dumps(obj, ensure_ascii=False))
         return obj
-    #获取
+    # 获取
     default = {
         "last_opendir": HOME_DIR,
         "cuda": False,
-
-        "line_roles":{},
-
+        "line_roles": {},
         "only_video": False,
         "is_separate": False,
-        "remove_noise":True,
-
+        "remove_noise": True,
         "target_dir": "",
-
         "source_language": "en",
         "target_language": "zh-cn",
         "subtitle_language": "chi",
         "translate_type": 0,
         "subtitle_type": 0,  # embed soft
-
         "listen_text_zh-cn": "你好啊，我亲爱的朋友，希望你的每一天都是美好愉快的！",
         "listen_text_zh-tw": "你好啊，我親愛的朋友，希望你的每一天都是美好愉快的！",
         "listen_text_en": "Hello, my dear friend. I hope your every day is beautiful and enjoyable!",
@@ -596,210 +589,191 @@ Output format:
         "listen_text_pl": "Witam, mój drogi przyjacielu, mam nadzieję, że jesteś piękna każdego dnia!",
         "listen_text_nl": "Hallo mijn lieve vriend, ik hoop dat elke dag goed en fijn voor je is!!",
         "listen_text_sv": "Hej min kära vän, jag hoppas att varje dag är en bra och trevlig dag för dig!",
-        
         "listen_text_he": "שלום, ידידי היקר, אני מקווה שכל יום בחייך יהיה נפלא ומאושר!",
         "listen_text_bn": "হ্যালো, আমার প্রিয় বন্ধু, আমি আশা করি আপনার জীবনের প্রতিটি দিন চমৎকার এবং সুখী হোক!",
-
         "tts_type": 0,  # 所选的tts顺序
         "split_type": "all",
-        "model_name": "medium" if Path(ROOT_DIR+"/models/models--Systran--faster-whisper-medium/snapshots").is_dir() else "tiny",  # 模型名
+        "model_name": (
+            "medium"
+            if Path(
+                ROOT_DIR + "/models/models--Systran--faster-whisper-medium/snapshots"
+            ).is_dir()
+            else "tiny"
+        ),  # 模型名
         "recogn_type": 0,  # 语音识别方式，数字代表显示顺序
-
         "voice_autorate": False,
         "voice_role": "No",
         "voice_rate": "0",
         "video_autorate": False,
         "append_video": True,
-
         "deepl_authkey": "",
         "deepl_api": "",
         "deepl_gid": "",
-
         "deeplx_address": "",
         "deeplx_key": "",
         "libre_address": "",
         "libre_key": "",
-
         "ott_address": "",
-
         "tencent_SecretId": "",
         "tencent_SecretKey": "",
         "tencent_termlist": "",
-        
-        "ali_id":"",
-        "ali_key":"",
-    
+        "ali_id": "",
+        "ali_key": "",
         "baidu_appid": "",
         "baidu_miyue": "",
-
         "chatgpt_api": "",
         "chatgpt_key": "",
         "chatgpt_model": _chatgpt_model_list[0],
         "chatgpt_template": "",
-
         "claude_api": "",
         "claude_key": "",
         "claude_model": _claude_model_list[0],
         "claude_template": "",
-
         "azure_api": "",
         "azure_key": "",
         "azure_version": "2024-06-01",
         "azure_model": _azure_model_list[0],
         "azure_template": "",
-
         "gemini_key": "",
         "gemini_model": "gemini-1.5-pro",
         "gemini_template": "",
-        "gemini_cut_audio":False,
-        "gemini_min_silence_duration_ms":200,
-        "gemini_speech_pad_ms":100, 
-        "gemini_onset":0.5,
-        "gemini_offset":0.35,
-        "gemini_srtprompt":"请将我上传的音频转录为符合SRT格式的字幕，请注意时间要精确到毫秒，转录后返回合法的SRT字幕内容，禁止附带任何提示说明或解释,也不要添加任何辅助标记、html标记，每条字幕最多2行，时长在1秒到12s之间" if defaulelang=='zh' else "Please transcribe my uploaded audio into SRT format subtitles, please note that the time should be accurate to milliseconds, after transcribing, return to the legal SRT subtitle content, do not attach any cues or explanations, and do not add any auxiliary markers, html markers, each subtitle up to 2 lines, the length of the subtitle between 1 second and 12s.",
-        
-        "gemini_srtprompt_cut":'Please transcribe the audio that was sent to you into text, then return the transcribed text without any explanations, hints, instructions or any other superfluous information attached to the returned text.',
-
-
+        "gemini_cut_audio": False,
+        "gemini_min_silence_duration_ms": 200,
+        "gemini_speech_pad_ms": 100,
+        "gemini_onset": 0.5,
+        "gemini_offset": 0.35,
+        "gemini_srtprompt": (
+            "请将我上传的音频转录为符合SRT格式的字幕，请注意时间要精确到毫秒，转录后返回合法的SRT字幕内容，禁止附带任何提示说明或解释,也不要添加任何辅助标记、html标记，每条字幕最多2行，时长在1秒到12s之间"
+            if defaulelang == "zh"
+            else "Please transcribe my uploaded audio into SRT format subtitles, please note that the time should be accurate to milliseconds, after transcribing, return to the legal SRT subtitle content, do not attach any cues or explanations, and do not add any auxiliary markers, html markers, each subtitle up to 2 lines, the length of the subtitle between 1 second and 12s."
+        ),
+        "gemini_srtprompt_cut": "Please transcribe the audio that was sent to you into text, then return the transcribed text without any explanations, hints, instructions or any other superfluous information attached to the returned text.",
         "localllm_api": "",
         "localllm_key": "",
         "localllm_model": _localllm_model_list[0],
         "localllm_template": "",
-
         "zijiehuoshan_key": "",
         "zijiehuoshan_model": _zijiehuoshan_model_list[0],
         "zijiehuoshan_template": "",
-
         "ai302_key": "",
         "ai302_model": "",
         "ai302_template": "",
-
         "trans_api_url": "",
         "trans_secret": "",
-
         "coquitts_role": "",
         "coquitts_key": "",
-
         "elevenlabstts_role": [],
         "elevenlabstts_key": "",
-
         "openaitts_api": "",
         "openaitts_key": "",
         "openaitts_model": "tts-1",
         "openaitts_role": "alloy,echo,fable,onyx,nova,shimmer",
-
         "openairecognapi_url": "",
         "openairecognapi_key": "",
         "openairecognapi_prompt": "",
         "openairecognapi_model": "whisper-1",
-
         "clone_api": "",
         "clone_voicelist": ["clone"],
-
         "zh_recogn_api": "",
-
         "recognapi_url": "",
         "recognapi_key": "",
         "stt_url": "",
         "stt_model": "tiny",
-
-        "sense_url":"",
-
+        "sense_url": "",
         "ttsapi_url": "",
         "ttsapi_voice_role": "",
         "ttsapi_extra": "pyvideotrans",
-
         "ai302tts_key": "",
         "ai302tts_model": "",
         "ai302tts_role": "alloy,echo,fable,onyx,nova,shimmer",
-
         "azure_speech_region": "",
         "azure_speech_key": "",
-
         "gptsovits_url": "",
         "gptsovits_role": "",
         "gptsovits_isv2": True,
         "gptsovits_extra": "pyvideotrans",
-
         "cosyvoice_url": "",
         "cosyvoice_role": "",
-
         "fishtts_url": "",
         "fishtts_role": "",
-        
         "f5tts_url": "",
         "f5tts_model": "",
         "f5tts_role": "",
-
         "doubao_appid": "",
         "doubao_access": "",
-
-        "volcenginetts_appid":"",
-        "volcenginetts_access":"",
-        "volcenginetts_cluster":"",
-
+        "volcenginetts_appid": "",
+        "volcenginetts_access": "",
+        "volcenginetts_cluster": "",
         "chattts_api": "",
-
         "app_mode": "biaozhun",
-
-        "stt_source_language":0,
-        "stt_recogn_type":0,
-        "stt_model_name":"",
-        "stt_remove_noise":True,
-
-        "deepgram_apikey":"",
-        "deepgram_utt":200,
-
-        "trans_translate_type":0,
-        "trans_source_language":0,
-        "trans_target_language":1,
-        "trans_out_format":0,
-
-        "dubb_source_language":0,
-        "dubb_tts_type":0,
-        "dubb_role":0,
-        "dubb_out_format":0,
-        "dubb_voice_autorate":False,
-        "dubb_hecheng_rate":0,
-        "dubb_pitch_rate":0,
-        "dubb_volume_rate":0,
-
-
+        "stt_source_language": 0,
+        "stt_recogn_type": 0,
+        "stt_model_name": "",
+        "stt_remove_noise": True,
+        "deepgram_apikey": "",
+        "deepgram_utt": 200,
+        "trans_translate_type": 0,
+        "trans_source_language": 0,
+        "trans_target_language": 1,
+        "trans_out_format": 0,
+        "dubb_source_language": 0,
+        "dubb_tts_type": 0,
+        "dubb_role": 0,
+        "dubb_out_format": 0,
+        "dubb_voice_autorate": False,
+        "dubb_hecheng_rate": 0,
+        "dubb_pitch_rate": 0,
+        "dubb_volume_rate": 0,
     }
     # 创建默认提示词文件
-    Path(ROOT_DIR+'/videotrans/prompts/srt').mkdir(parents=True,exist_ok=True)
+    Path(ROOT_DIR + "/videotrans/prompts/srt").mkdir(parents=True, exist_ok=True)
+
     def _create_default_promot():
-        prompt_langcode = '' if defaulelang == "zh" else "-en"
+        prompt_langcode = "" if defaulelang == "zh" else "-en"
         _root_path = Path(ROOT_DIR)
-        for ainame in ['chatgpt','azure','gemini','localllm','ai302','zijie']:
-            chatgpt_path = _root_path / f'videotrans/{ainame}{prompt_langcode}.txt'
+        for ainame in ["chatgpt", "azure", "gemini", "localllm", "ai302", "zijie"]:
+            chatgpt_path = _root_path / f"videotrans/{ainame}{prompt_langcode}.txt"
             if not chatgpt_path.exists():
-                with chatgpt_path.open('w',encoding='utf-8') as f:
-                    f.write(prompt_zh if defaulelang=='zh' else prompt_en)
-            chatgpt_path = _root_path / f'videotrans/prompts/srt/{ainame}{prompt_langcode}.txt'
+                with chatgpt_path.open("w", encoding="utf-8") as f:
+                    f.write(prompt_zh if defaulelang == "zh" else prompt_en)
+            chatgpt_path = (
+                _root_path / f"videotrans/prompts/srt/{ainame}{prompt_langcode}.txt"
+            )
             if not chatgpt_path.exists():
-                with chatgpt_path.open('w', encoding='utf-8') as f:
-                    f.write(prompt_zh_srt if defaulelang=='zh' else prompt_en_srt)
+                with chatgpt_path.open("w", encoding="utf-8") as f:
+                    f.write(prompt_zh_srt if defaulelang == "zh" else prompt_en_srt)
+
     try:
         _create_default_promot()
         if os.path.exists(ROOT_DIR + "/videotrans/params.json"):
-            default.update(json.loads(Path(ROOT_DIR + "/videotrans/params.json").read_text(encoding='utf-8')))
+            default.update(
+                json.loads(
+                    Path(ROOT_DIR + "/videotrans/params.json").read_text(
+                        encoding="utf-8"
+                    )
+                )
+            )
         else:
-            with open(ROOT_DIR + "/videotrans/params.json", 'w', encoding='utf-8') as f:
+            with open(ROOT_DIR + "/videotrans/params.json", "w", encoding="utf-8") as f:
                 f.write(json.dumps(default, ensure_ascii=False))
     except Exception:
         pass
     return default
 
+
 # api key 翻译配置等信息，每次执行任务均有变化
 params = getset_params()
 
-gemini_recogn_txt= 'gemini_recogn.txt' if defaulelang=='zh' else 'gemini_recogn-en.txt'
-if Path(ROOT_DIR+f'/videotrans/{gemini_recogn_txt}').exists():
-    params['gemini_srtprompt']=Path(ROOT_DIR+f'/videotrans/{gemini_recogn_txt}').read_text(encoding='utf-8')
+gemini_recogn_txt = (
+    "gemini_recogn.txt" if defaulelang == "zh" else "gemini_recogn-en.txt"
+)
+if Path(ROOT_DIR + f"/videotrans/{gemini_recogn_txt}").exists():
+    params["gemini_srtprompt"] = Path(
+        ROOT_DIR + f"/videotrans/{gemini_recogn_txt}"
+    ).read_text(encoding="utf-8")
 
-explames={
-    "zh-cn":"""1
+explames = {
+    "zh-cn": """1
 00:00:01,950 --> 00:00:04,410
 古老星系中发现了有机分子.
 
@@ -810,7 +784,7 @@ explames={
 3
 00:00:07,260 --> 00:00:09,880
 韦伯正式展开拍摄任务已经届满周年。""",
-    "zh-tw":"""1
+    "zh-tw": """1
 00:00:01,950 --> 00:00:04,410
 在古代星系中發現的有機分子。
 
@@ -821,7 +795,7 @@ explames={
 3
 00:00:07,260 --> 00:00:09,880
 韋伯正式啟動拍攝任務的周年紀念日已過。""",
-    "en":"""1
+    "en": """1
 00:00:01,950 --> 00:00:04,410
 Organic Molecules Found in Ancient Galaxies.
 
@@ -832,7 +806,7 @@ How far we are from Type III contact.
 3
 00:00:07,260 --> 00:00:09,880
 The anniversary of Webb's official launch of his filming mission has expired.""",
-    "ja":"""1
+    "ja": """1
 00:00:01,950 --> 00:00:04,410
 古代の銀河で発見された有機分子。
 
@@ -843,7 +817,7 @@ The anniversary of Webb's official launch of his filming mission has expired."""
 3
 00:00:07,260 --> 00:00:09,880
 ウェーバーが正式に撮影を開始してから記念日となった。""",
-    "ko":"""1
+    "ko": """1
 00:00:01,950 --> 00:00:04,410
 고대 은하계에서 발견된 유기분자.
 
@@ -854,7 +828,7 @@ The anniversary of Webb's official launch of his filming mission has expired."""
 3
 00:00:07,260 --> 00:00:09,880
 웨버가 정식으로 촬영을 시작한 지 1주년이 되는 날이다.""",
-    "ru":"""1
+    "ru": """1
 00:00:01,950 --> 00:00:04,410
 Органические молекулы обнаружены в древних галактиках.
 
@@ -865,7 +839,7 @@ The anniversary of Webb's official launch of his filming mission has expired."""
 3
 00:00:07,260 --> 00:00:09,880
 Это была годовщина с тех пор, как Вебер официально начал съемки.""",
-    "es":"""1
+    "es": """1
 00:00:01,950 --> 00:00:04,410
 Moléculas orgánicas descubiertas en galaxias antiguas.
 
@@ -876,7 +850,7 @@ Moléculas orgánicas descubiertas en galaxias antiguas.
 3
 00:00:07,260 --> 00:00:09,880
 Ha sido el aniversario desde que Weber comenzó oficialmente a filmar.""",
-    "pt":"""1
+    "pt": """1
 00:00:01.950 --> 00:00:04.410
 Moléculas orgânicas descobertas em galáxias antigas.
 
@@ -887,7 +861,7 @@ A que distância estamos dos Encontros Imediatos de Terceiro Grau?
 3
 00:00:07.260 --> 00:00:09.880
 Já faz anos desde que Weber começou oficialmente a filmar.""",
-    "it":"""1
+    "it": """1
 00:00:01,950 --> 00:00:04,410
 Molecole organiche scoperte nelle galassie antiche.
 
@@ -898,7 +872,7 @@ Quanto siamo lontani dagli Incontri Ravvicinati del Terzo Tipo?
 3
 00:00:07,260 --> 00:00:09,880
 È l'anniversario da quando Weber ha iniziato ufficialmente le riprese.""",
-    "fr":"""1
+    "fr": """1
 00:00:01,950 --> 00:00:04,410
 Molécules organiques découvertes dans les galaxies anciennes.
 
@@ -909,7 +883,7 @@ Où sommes-nous des rencontres rapprochées du troisième type ?
 3
 00:00:07,260 --> 00:00:09,880
 C'est l'anniversaire du début officiel du tournage de Weber.""",
-    "de":"""1
+    "de": """1
 00:00:01.950 --> 00:00:04.410
 Organische Moleküle in alten Galaxien entdeckt.
 
@@ -920,7 +894,7 @@ Wie weit sind wir von Unheimlichen Begegnungen der Dritten Art entfernt?
 3
 00:00:07.260 --> 00:00:09.880
 Es ist der Jahrestag, seit Weber offiziell mit den Dreharbeiten begonnen hat.""",
-    "th":"""1
+    "th": """1
 00:00:01,950 --> 00:00:04,410
 โมเลกุลอินทรีย์ที่ค้นพบในกาแลคซีโบราณ
 
@@ -931,7 +905,7 @@ Es ist der Jahrestag, seit Weber offiziell mit den Dreharbeiten begonnen hat."""
 3
 00:00:07,260 --> 00:00:09,880
 ถือเป็นวันครบรอบที่เวเบอร์เริ่มถ่ายทำอย่างเป็นทางการ""",
-    "tr":"""1
+    "tr": """1
 00:00:01,950 --> 00:00:04,410
 Antik galaksilerde keşfedilen organik moleküller.
 
@@ -942,7 +916,7 @@ Antik galaksilerde keşfedilen organik moleküller.
 3
 00:00:07,260 --> 00:00:09,880
 Weber'in resmi olarak çekime başlamasının yıldönümü oldu.""",
-    "vi":"""1
+    "vi": """1
 00:00:01,950 --> 00:00:04,410
 Các phân tử hữu cơ được phát hiện trong các thiên hà cổ đại
 
@@ -953,7 +927,7 @@ Chúng ta còn cách Close Encounters of the Third Kind bao xa?
 3
 00:00:07,260 --> 00:00:09,880
 Đã là ngày kỷ niệm Weber chính thức bắt đầu quay phim.""",
-    "ar":"""1
+    "ar": """1
 00:00:01,950 --> 00:00:04,410
 الجزيئات العضوية المكتشفة في المجرات القديمة
 
@@ -964,7 +938,7 @@ Chúng ta còn cách Close Encounters of the Third Kind bao xa?
 3
 00:00:07,260 --> 00:00:09,880
 لقد كانت الذكرى السنوية منذ أن بدأ ويبر التصوير رسميًا.""",
-    "hu":"""1
+    "hu": """1
 00:00:01,950 --> 00:00:04,410
 Az ősi galaxisokban felfedezett szerves molekulák.
 
@@ -975,7 +949,7 @@ Milyen messze vagyunk a Harmadik típusú közeli találkozásoktól?
 3
 00:00:07,260 --> 00:00:09,880
 Eltelt az évforduló, hogy Weber hivatalosan is elkezdte a forgatást.""",
-    "hi":"""1
+    "hi": """1
 00:00:01,950 --> 00:00:04,410
 प्राचीन आकाशगंगाओं में कार्बनिक अणुओं की खोज की गई।
 
@@ -986,7 +960,7 @@ Eltelt az évforduló, hogy Weber hivatalosan is elkezdte a forgatást.""",
 3
 00:00:07,260 --> 00:00:09,880
 वेबर द्वारा आधिकारिक तौर पर फिल्मांकन शुरू करने की यह सालगिरह है।""",
-    "id":"""1
+    "id": """1
 00:00:01,950 --> 00:00:04,410
 Molekul organik ditemukan di galaksi kuno.
 
@@ -997,7 +971,7 @@ Seberapa jauh kita dari Close Encounters of the Third Kind?
 3
 00:00:07,260 --> 00:00:09,880
 Ini adalah hari jadi sejak Weber secara resmi mulai syuting.""",
-    "uk":"""1
+    "uk": """1
 00:00:01,950 --> 00:00:04,410
 Органічні молекули, виявлені в стародавніх галактиках.
 
@@ -1008,7 +982,7 @@ Ini adalah hari jadi sejak Weber secara resmi mulai syuting.""",
 3
 00:00:07,260 --> 00:00:09,880
 Це був ювілей, відколи Вебер офіційно почав зніматися.""",
-    "ms":"""1
+    "ms": """1
 00:00:01,950 --> 00:00:04,410
 Molekul organik ditemui dalam galaksi purba.
 
@@ -1019,7 +993,7 @@ Berapa jauhkah kita dari Pertemuan Dekat Jenis Ketiga?
 3
 00:00:07,260 --> 00:00:09,880
 Ia telah menjadi ulang tahun sejak Weber secara rasmi memulakan penggambaran.""",
-    "kk":"""1
+    "kk": """1
 00:00:01,950 --> 00:00:04,410
 Ежелгі галактикаларда табылған органикалық молекулалар.
 
@@ -1030,7 +1004,7 @@ Ia telah menjadi ulang tahun sejak Weber secara rasmi memulakan penggambaran."""
 3
 00:00:07,260 --> 00:00:09,880
 Вебер ресми түрде түсірілімді бастағанына бір мерейтой болды.""",
-    "cs":"""1
+    "cs": """1
 00:00:01,950 --> 00:00:04,410
 Organické molekuly objevené ve starověkých galaxiích.
 
@@ -1041,7 +1015,7 @@ Jak daleko jsme od Blízkých setkání třetího druhu?
 3
 00:00:07,260 --> 00:00:09,880
 Je to výročí, kdy Weber oficiálně začal natáčet.""",
-    "pl":"""1
+    "pl": """1
 00:00:01,950 --> 00:00:04,410
 Cząsteczki organiczne odkryte w starożytnych galaktykach.
 
@@ -1052,7 +1026,7 @@ Jak daleko jesteśmy od Bliskich Spotkań Trzeciego Stopnia?
 3
 00:00:07,260 --> 00:00:09,880
 Minęła rocznica oficjalnego rozpoczęcia zdjęć przez Webera.""",
-    "nl":"""1
+    "nl": """1
 00:00:01,950 --> 00:00:04,410
 Organische moleculen ontdekt in oude sterrenstelsels.
 
@@ -1063,7 +1037,7 @@ Hoe ver zijn we verwijderd van Close Encounters of the Third Kind?
 3
 00:00:07,260 --> 00:00:09,880
 Het is de verjaardag sinds Weber officieel begon met filmen.""",
-    "sv":"""1
+    "sv": """1
 00:00:01,950 --> 00:00:04,410
 Organiska molekyler upptäckta i antika galaxer.
 
@@ -1074,7 +1048,7 @@ Hur långt är vi från Close Encounters of the Third Kind?
 3
 00:00:07,260 --> 00:00:09,880
 Det är jubileum sedan Weber officiellt började filma.""",
-    "he":"""1
+    "he": """1
 00:00:01,950 --> 00:00:04,410
 מולקולות אורגניות שהתגלו בגלקסיות עתיקות.
 
@@ -1085,7 +1059,7 @@ Det är jubileum sedan Weber officiellt började filma.""",
 3
 00:00:07,260 --> 00:00:09,880
 זה היה יום השנה מאז ובר החל לצלם באופן רשמי.""",
-    "bn":"""1
+    "bn": """1
 00:00:01,950 --> 00:00:04,410
 প্রাচীন ছায়াপথে আবিষ্কৃত জৈব অণু।
 
@@ -1095,8 +1069,28 @@ Det är jubileum sedan Weber officiellt började filma.""",
 
 3
 00:00:07,260 --> 00:00:09,880
-ওয়েবার আনুষ্ঠানিকভাবে চিত্রগ্রহণ শুরু করার পর থেকে এটি বার্ষিকী।"""
+ওয়েবার আনুষ্ঠানিকভাবে চিত্রগ্রহণ শুরু করার পর থেকে এটি বার্ষিকী।""",
 }
 
 
-ELEVENLABS_CLONE=['zh','en','fr','de','hi','pt','es','ja','ko','ar','ru','id','it','tr','pl','sv','ms','uk','cs']
+ELEVENLABS_CLONE = [
+    "zh",
+    "en",
+    "fr",
+    "de",
+    "hi",
+    "pt",
+    "es",
+    "ja",
+    "ko",
+    "ar",
+    "ru",
+    "id",
+    "it",
+    "tr",
+    "pl",
+    "sv",
+    "ms",
+    "uk",
+    "cs",
+]
