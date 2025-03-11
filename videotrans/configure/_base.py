@@ -11,7 +11,9 @@ class BaseCon:
         self.shound_del = False
 
     def _signal(self, **kwargs):
+        # 没有 `uuid`
         if "uuid" not in kwargs:
+            # 赋值
             kwargs["uuid"] = self.uuid
         tools.set_process(**kwargs)
 

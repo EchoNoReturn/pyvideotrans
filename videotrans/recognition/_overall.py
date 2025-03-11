@@ -27,10 +27,13 @@ class FasterAll(BaseRecogn):
     # 获取新进程的结果
     def _get_signal_from_process(self, q: multiprocessing.Queue):
         while not self.has_done:
+            # 退出
             if self._exit():
                 Path(self.pidfile).unlink(missing_ok=True)
                 return
+
             try:
+                # 非空队列
                 if not q.empty():
                     data = q.get_nowait()
                     if self.inst and self.inst.precent < 50:
@@ -39,33 +42,52 @@ class FasterAll(BaseRecogn):
                         self._signal(text=data['text'], type=data['type'])
             except Exception as e:
                 print(e)
+            # 阻塞 0.2s
             time.sleep(0.2)
 
+    # 处理字幕数据信息 raws
     def get_srtlist(self,raws):
+        # 是否需要进行中文简繁转换
         jianfan=config.settings.get('zh_hant_s')
         for i in list(raws):
+            # 没有字幕
             if len(i['words'])<1:
                 continue
             tmp={
                 'text':zhconv.convert(i['text'], 'zh-hans') if jianfan and self.detect_language[:2]=='zh' else i['text'],
+
+                # 起止时间转毫秒整数
                 'start_time':int(i['words'][0]['start']*1000),
                 'end_time':int(i['words'][-1]['end']*1000)
             }
+            
+            # 起止时间转为SRT格式  HH:MM:SS,mmm
             tmp['startraw']=tools.ms_to_time_string(ms=tmp['start_time'])
             tmp['endraw']=tools.ms_to_time_string(ms=tmp['end_time'])
+            
+            # 生成SRT格式时间轴
             tmp['time']=f"{tmp['startraw']} --> {tmp['endraw']}"
+
+            # 添加到raws列表
             self.raws.append(tmp)
 
+    # 音频处理, 使用多进程进行语音识别, 并处理识别结果
     def _exec(self):
         while 1:
             if self._exit():
+                # 删除进程ID文件
                 Path(self.pidfile).unlink(missing_ok=True)
                 return
+            
+            # 等待其他线程完成
             if config.model_process is not None:
                 import glob
+                # .lock文件是否存在 不存在则所有线程结束
                 if len(glob.glob(config.TEMP_DIR+'/*.lock'))==0:
                     config.model_process=None
                     break
+                
+                # .lock文件不存在 阻塞1s 继续等待
                 self._signal(text="等待另外进程退出")
                 time.sleep(1)
                 continue
@@ -75,10 +97,13 @@ class FasterAll(BaseRecogn):
         result_queue = multiprocessing.Queue()
         try:
             self.has_done = False
+            # 启用线程监听进程信号
             threading.Thread(target=self._get_signal_from_process, args=(result_queue,)).start()
             self.error=''
+            
+            #  使用 multiprocessing.Manager 创建一个共享内存的列表和字典
             with multiprocessing.Manager() as manager:
-                raws = manager.list([])
+                raws = manager.list([]) # 存储识别结果
                 err = manager.dict({"msg": ""})
                 detect=manager.dict({"langcode":self.detect_language})
                 # 创建并启动新进程
