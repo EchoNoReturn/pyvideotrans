@@ -15,6 +15,7 @@ from videotrans.util import tools
 """
 
 
+# 对音频文件语音识别
 class SpeechToText(BaseTask):
     """
     obj={
@@ -37,6 +38,7 @@ class SpeechToText(BaseTask):
     """
 
     def __init__(self, cfg: Dict = None, obj: Dict = None):
+        # 初始化设置输出格式和识别状态
         super().__init__(cfg, obj)
         self.out_format=cfg.get('out_format','srt')
         self.shoud_recogn = True
@@ -55,11 +57,13 @@ class SpeechToText(BaseTask):
         self._signal(text='语音识别文字处理中' if config.defaulelang == 'zh' else 'Speech Recognition to Word Processing')
 
     def prepare(self):
+        # 转换音频为16k采样率
         if self._exit():
             return
         tools.conver_to_16k(self.cfg['name'], self.cfg['shibie_audio'])
 
     def recogn(self):
+        # 识别音频内容生成字幕文件
         if self._exit():
             return
         while 1:
@@ -128,9 +132,11 @@ class SpeechToText(BaseTask):
             raise
 
     def task_done(self):
+        # 任务完成转换字幕格式
         if self._exit():
             return
         self._signal(text=f"{self.cfg['name']}", type='succeed')
+        
         tools.send_notification(config.transobj['Succeed'], f"{self.cfg['basename']}")
         if self.out_format=='txt':
             import re
@@ -147,6 +153,7 @@ class SpeechToText(BaseTask):
             Path(self.cfg['shound_del_name']).unlink(missing_ok=True)
 
     def _exit(self):
+        # 是否需要退出任务
         if config.exit_soft or config.box_recogn !='ing':
             return True
         return False

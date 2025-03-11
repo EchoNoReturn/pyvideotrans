@@ -64,14 +64,19 @@ class BaseRecogn(BaseCon):
             raise Exception(f'[error]not exists {self.audio_file}')
 
     # 出错时发送停止信号
+    # return 字典 或者 None
     def run(self) -> Union[List[Dict], None]:
         self._signal(text="")
         try:
+            # 取语言前两个字符转换为小写
             if self.detect_language[:2].lower() in ['zh', 'ja', 'ko']:
                 self.flag.append(" ")
                 self.join_word_flag = ""
             return self._exec()
+        
+        # 捕获异常 转换为字符串
         except Exception as e:
+            # 打印异常信息
             config.logger.exception(e, exc_info=True)
             msg = f'{str(e)}'
             if re.search(r'cudaErrorNoKernelImageForDevice', msg, re.I) is not None:
@@ -85,10 +90,12 @@ class BaseRecogn(BaseCon):
             self._signal(text=msg, type="error")
             raise
         finally:
+            # 删除临时代理
             if self.shound_del:
                 self._set_proxy(type='del')
 
     def _exec(self) -> Union[List[Dict], None]:
+        # pass占位符 最终返回 None
         pass
 
     def re_segment_sentences(self,words,langcode):

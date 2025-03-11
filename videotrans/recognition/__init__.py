@@ -202,4 +202,5 @@ def run(*,
         return FasterAvg(**kwargs).run()
 
     from ._overall import FasterAll
+    # 语音识别模型
     return FasterAll(**kwargs).run()

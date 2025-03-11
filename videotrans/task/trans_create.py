@@ -298,20 +298,25 @@ class TransCreate(BaseTask):
                     time.sleep(1)
 
                 subprocess.run(cmd)
+                # 定义输出的字幕文件路径
                 outsrt_file = (
                         self.cfg["target_dir"]
                         + "/"
                         + Path(self.cfg["shibie_audio"]).stem
                         + ".srt"
                 )
+                # 如果输出的字幕文件路径与源字幕路径不同，则复制到源字幕路径并删除原文件
                 if outsrt_file != self.cfg["source_sub"]:
                     shutil.copy2(outsrt_file, self.cfg["source_sub"])
                     Path(outsrt_file).unlink(missing_ok=True)
+                # 发送信号更新字幕内容
                 self._signal(
                     text=Path(self.cfg["source_sub"]).read_text(encoding="utf-8"),
                     type="replace_subtitle",
                 )
             else:
+                # 使用其他识别类型进行语音识别
+                # raw_subtitles: 识别结果
                 raw_subtitles = run_recogn(
                     # faster-whisper openai-whisper googlespeech
                     recogn_type=self.cfg["recogn_type"],
@@ -333,6 +338,7 @@ class TransCreate(BaseTask):
                 )
                 if self._exit():
                     return
+                # 没有识别到有效文字信息, 抛出异常
                 if not raw_subtitles or len(raw_subtitles) < 1:
                     raise Exception(
                         self.cfg["basename"]
@@ -340,6 +346,7 @@ class TransCreate(BaseTask):
                             "{lang}", self.cfg["source_language"]
                         )
                     )
+                # 根据识别结果保存字幕文件
                 if isinstance(raw_subtitles, tuple):
                     self._save_srt_target(raw_subtitles[0], self.cfg["source_sub"])
                     self.source_srt_list = raw_subtitles[0]
@@ -348,6 +355,7 @@ class TransCreate(BaseTask):
                 else:
                     self._save_srt_target(raw_subtitles, self.cfg["source_sub"])
                     self.source_srt_list = raw_subtitles
+            # 标记识别完成
             self._recogn_succeed()
         except Exception as e:
             msg = f"{str(e)}{str(e.args)}"
