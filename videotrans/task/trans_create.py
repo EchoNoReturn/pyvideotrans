@@ -1,7 +1,6 @@
 import copy
 import math
 import os
-import random
 import re
 import shutil
 import textwrap
@@ -777,6 +776,7 @@ class TransCreate(BaseTask):
 
             tmp_dict = {
                 "text": it["text"],
+                "ref_audio": self.cfg["refer_audio"],
                 "ref_text": (
                     source_subs[i]["text"]
                     if source_subs and i < len(source_subs)
@@ -796,8 +796,9 @@ class TransCreate(BaseTask):
                 "filename": config.TEMP_DIR
                             + f"/dubbing_cache/{it['start_time']}-{it['end_time']}-{time.time()}-{len(it['text'])}-{i}.mp3",
             }
+            if voice_role == "clone-single":
+                tmp_dict["ref_text"] = self.cfg["refer_text"]
             # 如果是clone-voice类型， 需要截取对应片段
-            # 是克隆
             if (
                     self.cfg["tts_type"] in [COSYVOICE_TTS, CLONE_VOICE_TTS, F5_TTS]
                     and voice_role == "clone"

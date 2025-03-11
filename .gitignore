@@ -40,6 +40,7 @@ videotrans/translator/freechatgpt.py
 videotrans/cfg.json
 videotrans/params.json
 /tmp/
+/.tmp/
 runtime
 /.video_tmp/
 _config.json

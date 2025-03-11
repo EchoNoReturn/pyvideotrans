@@ -92,11 +92,6 @@ if __name__ == "__main__":
     except Exception as e:
         print("\n❌ 连接 OSS 失败:", str(e))
 
-    # 缓存目录路径创建
-    PROJECT_PATH = os.path.dirname(os.path.abspath(__file__))
-    UPLOAD_FOLDER = os.path.join(PROJECT_PATH, ".video_tmp")
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
     ###### 接口分割线 ######
 
     # 第1个接口 /tts
@@ -328,8 +323,6 @@ if __name__ == "__main__":
         print(res.json())
     
     """
-
-
     @app.route("/recogn", methods=["POST"])
     def recogn():
         data = request.json
@@ -445,16 +438,13 @@ if __name__ == "__main__":
         print(res.json())
     
     """
-
-
-    # 视频翻译
     @app.route("/trans_video", methods=["POST"])
     def trans_video():
         data = json.loads(request.json) if type(request.json) == str else request.json
         name = data.get("name", "")
         if not name:
             name = _download_file(
-                data.get("object_key"), os.path.abspath(UPLOAD_FOLDER)
+                data.get("object_key"), os.path.join(config.TEMP_DIR,"video_input_cache")
             )
             if not name:
                 return jsonify(
@@ -481,6 +471,7 @@ if __name__ == "__main__":
             # 配音
             "tts_type": int(data.get("tts_type", 0)),
             "voice_role": data.get("voice_role", ""),
+            "refer_audio": data.get("refer_audio", ""),
             "refer_text": data.get("refer_text", ""),
             "voice_rate": data.get("voice_rate", "+0%"),
             "voice_autorate": bool(data.get("voice_autorate", False)),
@@ -493,6 +484,10 @@ if __name__ == "__main__":
             "app_mode": "biaozhun",
             "only_video": bool(data.get("only_video", False)),
         }
+        # 自定义音色
+        if cfg["voice_role"] == "clone-single" and cfg["refer_audio"] and cfg["voice_rate"]:
+            cfg["refer_audio"] = bucket.sign_url("GET", cfg["refer_audio"], 3600)
+
         # 语音识别验证
         if not cfg["subtitles"]:
             is_allow = recognition.is_allow_lang(
@@ -603,8 +598,6 @@ if __name__ == "__main__":
       "msg": "ok"
     }
     """
-
-
     @app.route("/task_status", methods=["POST", "GET"])
     def task_status():
         # 1. 优先从 GET 请求参数中获取 task_id
@@ -688,9 +681,7 @@ if __name__ == "__main__":
 
 
     # 上传文件
-    def _upload_file(
-            file_path, content_type="application/octet-stream", expire_time=3600
-    ):
+    def _upload_file(file_path, content_type="application/octet-stream", expire_time=3600):
         try:
             object_key = str(uuid.uuid4())
             _, file_ext = os.path.splitext(file_path)

@@ -29,13 +29,15 @@ ROOT_DIR = _get_executable_path()
 
 _root_path = Path(ROOT_DIR)
 
-_tmpname = f"tmp"
+_tmpname = f".tmp"
 # 程序根下临时目录tmp
 _temp_path = _root_path / _tmpname
 _temp_path.mkdir(parents=True, exist_ok=True)
 
 TEMP_DIR = _temp_path.as_posix()
 Path(TEMP_DIR + "/dubbing_cache").mkdir(exist_ok=True)
+Path(TEMP_DIR + "/video_input_cache").mkdir(exist_ok=True)
+Path(TEMP_DIR + "/video_output_cache").mkdir(exist_ok=True)
 
 # 日志目录 logs
 _logs_path = _root_path / "logs"

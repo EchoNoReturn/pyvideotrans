@@ -90,6 +90,10 @@ class CosyVoice(BaseTTS):
                     )
                     api_url += "/clone_mul"
                     data["encode"] = "base64"
+                elif role == "clone-single":
+                    print(f"data_item:{data_item}")
+                    api_url += "/clone_mul"
+                    return
                 elif role and role.endswith(".wav"):
                     data["reference_audio"] = (
                         rolelist[role]["reference_audio"] if role in rolelist else None
