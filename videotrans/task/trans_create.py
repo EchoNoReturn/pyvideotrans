@@ -6,6 +6,7 @@ import shutil
 import textwrap
 import threading
 import time
+import uuid
 
 from pathlib import Path
 from typing import Dict
@@ -28,12 +29,14 @@ from videotrans.util import tools
 from ._base import BaseTask
 from ._rate import SpeedRate
 from ._remove_noise import remove_noise
+from videotrans.util.http_request import http_request
 
 
 class TransCreate(BaseTask):
     # （0）初始化配置和对象
     def __init__(self, cfg: Dict = None, obj: Dict = None):
         cfg_default = {
+            "oss_key": None,
             "cache_folder": None,
             "target_dir": None,
             "remove_noise": False,
@@ -64,6 +67,19 @@ class TransCreate(BaseTask):
         }
         cfg_default.update(cfg)
         super().__init__(cfg_default, obj)
+        # 记录开始时间
+        endpoint = "/vid/video/copyModify"
+        headers = {
+            "Content-Type": "application/json",
+        }
+        video_data = {
+            "id": self.cfg["record_id"],
+            "procStartTime": int(time.time() * 1000),
+        }
+        response = http_request.send_request(endpoint=endpoint, body=video_data, headers=headers)
+        if response["code"] != 0:
+            print("视频信息记录出错")
+
         if "app_mode" not in self.cfg:
             self.cfg["app_mode"] = "biaozhun"
         # 存放原始语言字幕
@@ -571,24 +587,55 @@ class TransCreate(BaseTask):
             shutil.rmtree(self.cfg["cache_folder"], ignore_errors=True)
         except Exception as e:
             config.logger.exception(e, exc_info=True)
+        # 结束任务计时
+        self._end_timer("task_done")  
 
-        self._end_timer("task_done")  # 结束任务计时
+        # 上传处理完成的视频至oss
+        bucket = self.cfg["bucket"]
+        object_key = str(uuid.uuid4())
+        oss_headers = {"Content-Type": "video/mp4", "x-oss-meta-file-ext": ".mp4"}
+        with open(self.cfg["targetdir_mp4"], "rb") as file:
+            bucket.put_object( object_key, file, headers=oss_headers)
 
-        # 打印各阶段的执行时间和百分比
+        # 入库
+        endpoint = "/vid/video/copyModify"
+        headers = {
+            "Content-Type": "application/json",
+        }
+
+        # 计算各阶段的执行时间和百分比
         total_time = sum(
             stage["duration"]
             for stage in self.execution_times.values()
             if "duration" in stage
         )
+        execution_logs = []
         for stage, times in self.execution_times.items():
             if "duration" in times:
-                percent = (
-                    (times["duration"] / total_time) * 100 if total_time > 0 else 0
-                )
-                config.logger.info(
-                    f"{stage}: {times['duration']:.2f}s      百分比: {percent:.2f}%"
-                )
-        config.logger.info(f"总耗时: {total_time:.2f}s")
+                percent = (times["duration"] / total_time) * 100 if total_time > 0 else 0
+                log_entry = f"{stage}: {times['duration']:.2f}s\t百分比: {percent:.2f}%"
+                execution_logs.append(log_entry)
+                config.logger.info(log_entry)
+        total_time_log = f"总耗时: {total_time:.2f}s"
+        execution_logs.append(total_time_log)
+        config.logger.info(total_time_log)
+
+        # 将日志信息转化为字符串
+        execution_logs_str = "\n".join(execution_logs)
+
+        # 构造请求参数
+        video_data = {
+            "id": self.cfg["record_id"],
+            "processStatus": "VIDEO_STATUS_SUCCEED",
+            "ossProcKey": object_key,
+            "procEndTime": int(time.time() * 1000),
+            "result": execution_logs_str,
+        }
+
+        # 发送请求
+        response = http_request.send_request(endpoint=endpoint, body=video_data, headers=headers)
+        if response["code"] != 0:
+            print("视频信息记录出错")
 
     # ====================== 内部方法 ====================== #
 
