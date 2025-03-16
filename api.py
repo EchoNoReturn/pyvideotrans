@@ -25,6 +25,7 @@ if __name__ == "__main__":
     from videotrans import tts as tts_model, translator, recognition
     from oss2.exceptions import OssError
     from datetime import datetime, timedelta
+    from videotrans.util.http_request import http_request
 
     ####### 配置信息
     config.exec_mode = "api"
@@ -456,6 +457,7 @@ if __name__ == "__main__":
         cfg = {
             # 通用
             "name": name,
+            "oss_key":  data.get("object_key", None),
             "is_separate": bool(data.get("is_separate", False)),
             "back_audio": data.get("back_audio", ""),
             # 识别
@@ -483,6 +485,8 @@ if __name__ == "__main__":
             "is_batch": True,
             "app_mode": "biaozhun",
             "only_video": bool(data.get("only_video", False)),
+            # 存储桶
+            "bucket": bucket,
         }
         # 自定义音色
         if cfg["voice_role"] == "clone-single" and cfg["refer_audio"] and cfg["voice_rate"]:
@@ -534,14 +538,31 @@ if __name__ == "__main__":
         Path(obj["target_dir"]).mkdir(parents=True, exist_ok=True)
         cfg.update(obj)
 
+        # 入库
+        endpoint = "/vid/video/copyModify"
+        headers = {
+            "Content-Type": "application/json",
+        }
+        video_data = {
+            "processStatus" : "VIDEO_STATUS_PROCEED",
+            "souLanguage": cfg["source_language"],
+            "tarLanguage": cfg["target_language"],
+            "uploadTime": data.get("uploadTime", int(time.time() * 1000)),
+            "ossVideoKey":  data.get("object_key"),
+            "taskId": obj["uuid"]
+        }
+        respone = http_request.send_request(endpoint=endpoint,body=video_data,headers=headers)
+        cfg["record_id"] = respone["msg"]
+        if(respone["code"] != 0):
+            return jsonify({"code" : 1, "msg":"视频信息记录出错"})
+        
         config.current_status = "ing"
         trk = TransCreate(cfg)
         config.prepare_queue.append(trk)
         tools.set_process(
             text=f"Currently in queue No.{len(config.prepare_queue)}", uuid=obj["uuid"]
-        )
-
-        return jsonify({"code": 0, "task_id": obj["uuid"]})
+        )                                              
+        return jsonify({"code": 0, "task_id": obj["uuid"],"id":cfg["record_id"]})
 
 
     # 获取任务进度接口
@@ -602,6 +623,7 @@ if __name__ == "__main__":
     def task_status():
         # 1. 优先从 GET 请求参数中获取 task_id
         task_id = request.args.get("task_id")
+        id = request.args.get("id")
         # 2. 如果 GET 参数中没有 task_id，再从 POST 表单中获取
         if task_id is None:
             task_id = request.form.get("task_id")
@@ -610,7 +632,7 @@ if __name__ == "__main__":
             task_id = request.json.get("task_id")
         if not task_id:
             return jsonify({"code": 1, "msg": "The parem  task_id is not set"})
-        return _get_task_data(task_id)
+        return _get_task_data(task_id,id)
 
 
     # 获取多个任务 前台 content-type:application/json, 数据 {task_id_list:[id1,id2,....]}
@@ -688,7 +710,7 @@ if __name__ == "__main__":
             headers = {"Content-Type": content_type, "x-oss-meta-file-ext": file_ext}
             # 执行上传
             with open(file_path, "rb") as file:
-                bucket.put_object(object_key, file, headers=headers)
+                bucket.put_object( object_key, file, headers=headers)
             # 生成预签名 URL
             signed_url = bucket.sign_url("GET", object_key, expire_time)
             return {"signed_url": signed_url, "file_ext": file_ext}
@@ -697,7 +719,7 @@ if __name__ == "__main__":
             return None
 
 
-    def _get_task_data(task_id):
+    def _get_task_data(task_id,id):
         file = PROCESS_INFO + f"/{task_id}.json"
         if not Path(file).is_file():
             if task_id in config.uuid_logs_queue:
@@ -726,18 +748,23 @@ if __name__ == "__main__":
             for name in file_list
         ]
 
-        # 上传文件
-        mp4_files = [file for file in absolute_path if file.endswith(".mp4")]
-        oss_data = _upload_file(mp4_files[0], "video/mp4")
-        print(f"\noss_data:{oss_data}\n")
+        #生成签名url
+        endpoint = f"/vid/video/targetVideo?id={id}"
+        headers = {
+            "Content-Type": "application/json",
+        }
+        respone = http_request.send_request(endpoint=endpoint,headers=headers)
+        signed_url = None
+        if respone["code"] == 0:
+            signed_url = bucket.sign_url("GET", respone["msg"], 3600)
+
         return {
             "code": 0,
             "msg": "ok",
             "data": {
                 "absolute_path": absolute_path,
                 "url": url,
-                "signed_url": oss_data["signed_url"],
-                "file_ext": oss_data["file_ext"],
+                "signed_url": signed_url,
             },
         }
 
