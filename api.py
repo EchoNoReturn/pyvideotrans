@@ -32,8 +32,10 @@ if __name__ == "__main__":
 
     # 设置根目录和默认主机、端口
     ROOT_DIR = config.ROOT_DIR
-    HOST = "127.0.0.1"
-    PORT = 9011
+    # HOST = "127.0.0.1"
+    # PORT = 9011
+    HOST = "0.0.0.0"
+    PORT = 8086
 
     # 读取 host.txt 设置主机和端口
     host_file = Path(ROOT_DIR + "/host.txt")
@@ -748,15 +750,28 @@ if __name__ == "__main__":
             for name in file_list
         ]
 
-        #生成签名url
+        # 生成签名 URL
         endpoint = f"/vid/video/targetVideo?id={id}"
-        headers = {
-            "Content-Type": "application/json",
-        }
-        respone = http_request.send_request(endpoint=endpoint,headers=headers)
+        headers = {"Content-Type": "application/json"}
         signed_url = None
-        if respone["code"] == 0:
-            signed_url = bucket.sign_url("GET", respone["msg"], 3600)
+        retry_count = 6  # 最多轮询 10 次
+        retry_interval = 3  # 每次轮询间隔 1 秒
+
+        for attempt in range(retry_count):
+            respone = http_request.send_request(endpoint=endpoint, headers=headers)
+            if respone["code"] == 0 and respone["msg"]:
+                try:
+                    signed_url = bucket.sign_url("GET", respone["msg"], 3600)
+                    break  # 成功生成签名 URL，退出轮询
+                except oss2.exceptions.ClientError as e:
+                    print(f"OSS ClientError: {e}")
+                    signed_url = None
+            else:
+                print(f"轮询尝试 {attempt + 1}/{retry_count} 失败，响应码: {respone['code']}")
+                time.sleep(retry_interval)
+
+        if signed_url is None:
+            raise Exception("无法生成签名 URL，请检查网络或配置")
 
         return {
             "code": 0,
@@ -765,6 +780,7 @@ if __name__ == "__main__":
                 "absolute_path": absolute_path,
                 "url": url,
                 "signed_url": signed_url,
+                "file_ext":".mp4",
             },
         }
 
