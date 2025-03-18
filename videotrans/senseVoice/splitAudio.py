@@ -2,6 +2,7 @@ import os
 import re
 import time
 import uuid
+import emoji
 import base64
 import shutil
 import uvicorn
@@ -27,6 +28,10 @@ class SplitAudio:
         hours, minutes = divmod(minutes, 60)
         return f"{hours:02}+{minutes:02}+{seconds:02},{milliseconds:03}"
 
+    # 移除字符串中的emoji表情
+    @staticmethod
+    def remove_emoji(text):
+        return emoji.replace_emoji(text, replace='')
 
     """
     分割文件
@@ -140,6 +145,7 @@ async def asr(language: str = Form(...),file: UploadFile = File(...)):
             line += 1
             local_file_path = os.path.join(wav_local_path, audio_file)
             msg = SplitAudio.asr_damo_api(local_file_path,language = language)
+            msg = SplitAudio.remove_emoji(msg)
             audio_file = audio_file.replace("+", ":")
             audio_file = audio_file.split("_to_")
             data = {
