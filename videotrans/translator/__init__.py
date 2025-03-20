@@ -29,6 +29,7 @@ AI302_INDEX = 17
 ALI_INDEX = 18
 QWEN_INDEX = 19 # Qwen
 DEEPSEEK_INDEX = 20 # deepseek
+ZHIPUAI_INDEX = 21 # zhipu ai
 # 翻译通道名字列表，显示在界面
 TRANSLASTE_NAME_LIST = [
     "Google(免费)" if config.defaulelang == 'zh' else 'Google',
@@ -670,6 +671,11 @@ def run(*, translate_type=None,
     if translate_type == DEEPSEEK_INDEX:
         from videotrans.translator._deepseek import Deepseek
         return Deepseek(**kwargs).run()
+
+    # zhipu ai 翻译模型
+    if translate_type == ZHIPUAI_INDEX:
+        from videotrans.translator._zhipu import Zhipu
+        return Zhipu(**kwargs).run()
 
     if translate_type == BAIDU_INDEX:
         from videotrans.translator._baidu import Baidu

@@ -71,6 +71,7 @@ def get_gradio_demo():
         ("微软翻译", 1),
         ("千问翻译", 19),
         ("deepseek 翻译", 20),
+        ("智谱AI 翻译", 21),
     ]
     # 目标语言
     target_languages = [

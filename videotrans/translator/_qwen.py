@@ -1,9 +1,5 @@
-import os
-import json
 from openai import OpenAI
 
-from typing import Union, List
-from urllib.parse import quote
 from videotrans.translator._base import BaseTrans
 
 
