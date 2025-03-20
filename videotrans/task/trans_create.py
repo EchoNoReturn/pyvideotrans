@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Dict
 from pydub import AudioSegment
 import requests
+from videotrans.task._remove_noise import remove_noise
+from videotrans.task._m4a_to_wav import convert_m4a_to_wav
 from videotrans import translator
 from videotrans.configure import config
 from videotrans.recognition import run as run_recogn, Faster_Whisper_XXL
@@ -333,10 +335,25 @@ class TransCreate(BaseTask):
                 # )
 
             else:
-                # 使用其他识别模型进行语音识别
-                # raw_subtitles: 识别结果
-                split_audio_url = "http://127.0.0.1:10001/asr/client"
-                file_path = self.cfg["source_wav_output"]
+                # 语音识别前需进行降噪处理
+
+                # 源音频降噪前需转音频格式  m4a -> wav
+                m4a_to_wav_path = self.cfg['source_wav_output']
+                m4a_to_wav_file_path = os.path.dirname(m4a_to_wav_path)+"/"+str(uuid.uuid4())+".wav"
+                convert_m4a_to_wav(m4a_to_wav_path, m4a_to_wav_file_path)
+
+                """
+                remove_noise:
+                    param1: 需降噪的音频路径
+                    param2: 降噪后的音频路径
+                    return: 降噪成功返回param2, 降噪失败返回param1
+                """
+                target_path = f"{self.cfg['cache_folder']}/removed_noise_{time.time()}.wav"
+                start_time = time.time()
+                file_path = remove_noise(m4a_to_wav_file_path,target_path)
+                # 打印降噪时间保留三位小数
+                print(f"降噪耗时: {round(time.time() - start_time,3)} s")
+
                 with open(file_path, "rb") as file:
                     files = {
                         "file": file,
@@ -344,11 +361,16 @@ class TransCreate(BaseTask):
                     data = {
                         "language": self.cfg["detect_language"]
                     }
+                    # 使用其他识别模型进行语音识别
+                    split_audio_url = "http://127.0.0.1:10001/asr/client"
                     response = requests.post(split_audio_url, files = files, data = data)
                     if response.status_code == 200:
+                    # raw_subtitles: 识别结果
                         raw_subtitles = response.json().get("data")
                         self.source_srt_list = raw_subtitles
                         self._save_srt_target(raw_subtitles, self.cfg["source_sub"])
+                    else:
+                        raise Exception("语音识别失败！")
 
                 # raw_subtitles = run_recogn(
                 #     # faster-whisper openai-whisper googlespeech
