@@ -13,7 +13,7 @@ class Zhipu(BaseTrans):
             api_key="de9e6c81a07e4d3dba7632912b451ba8.qKKa7DW1XHR2c739"
         )
         response = client.chat.completions.create(
-            model="glm-4-plus",  # 填写需要调用的模型编码
+            model="glm-4-flash",  # 填写需要调用的模型编码
             messages=[
                 {
                     "role": "system",
@@ -22,7 +22,7 @@ class Zhipu(BaseTrans):
                 {
                     "role": "user",
                     "content": f"请将我发送给你的{old_language}内容翻译为{new_language}，仅返回翻译即可，"
-                               f"不要提问、不要回答问题、不要确认、不要回复本条内容，从下一行开始翻译\n{content}"
+                               f"不要提问、不要回答问题、不要确认、不要有提示词、不要回复本条内容，确保逐句翻译，不要遗漏任何部分,从下一行开始翻译\n{content}"
                 }
             ]
         )
