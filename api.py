@@ -463,20 +463,20 @@ if __name__ == "__main__":
             "is_separate": bool(data.get("is_separate", False)),
             "back_audio": data.get("back_audio", ""),
             # 识别
-            "recogn_type": int(data.get("recogn_type", 0)),
+            "recogn_type": 0,
             "split_type": data.get("split_type", "all"),
-            "model_name": data.get("model_name", "tiny"),
+            "model_name": "large-v3",
             "cuda": bool(data.get("is_cuda", False)),
             "subtitles": data.get("subtitles", ""),
             # 翻译
-            "translate_type": int(data.get("translate_type", 0)),
+            "translate_type": int(data.get("translate_type", 1)),
             "target_language": data.get("target_language"),
             "source_language": data.get("source_language"),
             # 配音
-            "tts_type": int(data.get("tts_type", 0)),
-            "voice_role": data.get("voice_role", ""),
-            "refer_audio": data.get("refer_audio", ""),
-            "refer_text": data.get("refer_text", ""),
+            "tts_type": 1,
+            "voice_role": data.get("voice_role", "clone"),# clone-single
+            "refer_audio": data.get("refer_audio", ""),# 参考音频oss
+            "refer_text": data.get("refer_text", ""),# 参考文本
             "voice_rate": data.get("voice_rate", "+0%"),
             "voice_autorate": bool(data.get("voice_autorate", False)),
             "video_autorate": bool(data.get("video_autorate", False)),
@@ -680,7 +680,6 @@ if __name__ == "__main__":
         except Exception as e:
             return jsonify({"code": 1, "msg": str(e)})
 
-
     # 下载文件
     def _download_file(object_key, path):
         try:
@@ -701,23 +700,6 @@ if __name__ == "__main__":
             return file_path
         except Exception as e:
             print(e)
-            return None
-
-
-    # 上传文件
-    def _upload_file(file_path, content_type="application/octet-stream", expire_time=3600):
-        try:
-            object_key = str(uuid.uuid4())
-            _, file_ext = os.path.splitext(file_path)
-            headers = {"Content-Type": content_type, "x-oss-meta-file-ext": file_ext}
-            # 执行上传
-            with open(file_path, "rb") as file:
-                bucket.put_object( object_key, file, headers=headers)
-            # 生成预签名 URL
-            signed_url = bucket.sign_url("GET", object_key, expire_time)
-            return {"signed_url": signed_url, "file_ext": file_ext}
-        except Exception as e:
-            print(f"上传失败：{e}")
             return None
 
 
@@ -784,7 +766,6 @@ if __name__ == "__main__":
             },
         }
 
-
     def _get_order(task_id):
         order_num = 0
         for it in config.prepare_queue:
@@ -847,7 +828,6 @@ if __name__ == "__main__":
             else f"Waiting in queue"
         )
 
-
     def _get_files_in_directory(dirname):
         """
         使用 pathlib 库获取指定目录下的所有文件名，并返回一个文件名列表。
@@ -866,7 +846,6 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"Error while accessing directory {dirname}: {e}")
             return []
-
 
     def _listen_queue():
         # 监听队列日志 uuid_logs_queue 不在停止中的 stoped_uuid_set

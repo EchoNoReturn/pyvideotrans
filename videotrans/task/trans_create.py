@@ -13,7 +13,7 @@ from typing import Dict
 from pydub import AudioSegment
 import requests
 from videotrans.task._remove_noise import remove_noise
-from videotrans.task._m4a_to_wav import convert_m4a_to_wav
+# from videotrans.task._m4a_to_wav import convert_m4a_to_wav
 from videotrans import translator
 from videotrans.configure import config
 from videotrans.recognition import run as run_recogn, Faster_Whisper_XXL
@@ -41,7 +41,7 @@ class TransCreate(BaseTask):
             "oss_key": None,
             "cache_folder": None,
             "target_dir": None,
-            "remove_noise": False,
+            "remove_noise": True,
             "detect_language": None,
             "subtitle_language": None,
             "source_language_code": None,
@@ -281,116 +281,93 @@ class TransCreate(BaseTask):
             )
 
             if self.cfg["recogn_type"] == Faster_Whisper_XXL:
-
                 import subprocess, shutil
-
-                # cmd = [
-                #     config.settings.get("Faster_Whisper_XXL", ""),
-                #     self.cfg["shibie_audio"],
-                #     "-f",
-                #     "srt",
-                # ]
-                # if self.cfg["detect_language"] != "auto":
-                #     cmd.extend(["-l", self.cfg["detect_language"][:2]])
-                # cmd.extend(
-                #     [
-                #         "--model",
-                #         self.cfg["model_name"],
-                #         "--output_dir",
-                #         self.cfg["target_dir"],
-                #     ]
-                # )
-                # txt_file = (
-                #         Path(
-                #             config.settings.get("Faster_Whisper_XXL", "")
-                #         ).parent.as_posix()
-                #         + "/pyvideotrans.txt"
-                # )
-                # if Path(txt_file).exists():
-                #     cmd.extend(
-                #         Path(txt_file).read_text(encoding="utf-8").strip().split(" ")
-                #     )
-
-                # while 1:
-                #     if not config.copying:
-                #         break
-                #     time.sleep(1)
-
-                # subprocess.run(cmd)
-                # # 定义输出的字幕文件路径
-                # outsrt_file = (
-                #         self.cfg["target_dir"]
-                #         + "/"
-                #         + Path(self.cfg["shibie_audio"]).stem
-                #         + ".srt"
-                # )
-                # # 如果输出的字幕文件路径与源字幕路径不同，则复制到源字幕路径并删除原文件
-                # if outsrt_file != self.cfg["source_sub"]:
-                #     shutil.copy2(outsrt_file, self.cfg["source_sub"])
-                #     Path(outsrt_file).unlink(missing_ok=True)
-                # # 发送信号更新字幕内容
-                # self._signal(
-                #     text=Path(self.cfg["source_sub"]).read_text(encoding="utf-8"),
-                #     type="replace_subtitle",
-                # )
-
+                cmd = [
+                    config.settings.get("Faster_Whisper_XXL", ""),
+                    self.cfg["shibie_audio"],
+                    "-f",
+                    "srt",
+                ]
+                if self.cfg["detect_language"] != "auto":
+                    cmd.extend(["-l", self.cfg["detect_language"][:2]])
+                cmd.extend(
+                    [
+                        "--model",
+                        self.cfg["model_name"],
+                        "--output_dir",
+                        self.cfg["target_dir"],
+                    ]
+                )
+                txt_file = (
+                        Path(
+                            config.settings.get("Faster_Whisper_XXL", "")
+                        ).parent.as_posix()
+                        + "/pyvideotrans.txt"
+                )
+                if Path(txt_file).exists():
+                    cmd.extend(
+                        Path(txt_file).read_text(encoding="utf-8").strip().split(" ")
+                    )
+                while 1:
+                    if not config.copying:
+                        break
+                    time.sleep(1)
+                subprocess.run(cmd)
+                # 定义输出的字幕文件路径
+                outsrt_file = (
+                        self.cfg["target_dir"]
+                        + "/"
+                        + Path(self.cfg["shibie_audio"]).stem
+                        + ".srt"
+                )
+                # 如果输出的字幕文件路径与源字幕路径不同，则复制到源字幕路径并删除原文件
+                if outsrt_file != self.cfg["source_sub"]:
+                    shutil.copy2(outsrt_file, self.cfg["source_sub"])
+                    Path(outsrt_file).unlink(missing_ok=True)
+                # 发送信号更新字幕内容
+                self._signal(
+                    text=Path(self.cfg["source_sub"]).read_text(encoding="utf-8"),
+                    type="replace_subtitle",
+                )
             else:
-                # 语音识别前需进行降噪处理
+                # file_path = self.cfg["shibie_audio"]
+                # with open(file_path, "rb") as file:
+                #     files = {
+                #         "file": file,
+                #     }
+                #     data = {
+                #         "language": self.cfg["detect_language"]
+                #     }
+                #     # 使用其他识别模型进行语音识别
+                #     split_audio_url = "http://127.0.0.1:10001/asr/client"
+                #     response = requests.post(split_audio_url, files = files, data = data)
+                #     if response.status_code == 200:
+                #     # raw_subtitles: 识别结果
+                #         raw_subtitles = response.json().get("data")
+                #         self.source_srt_list = raw_subtitles
+                #         self._save_srt_target(raw_subtitles, self.cfg["source_sub"])
+                #     else:
+                #         raise Exception("语音识别失败！")
 
-                # 源音频降噪前需转音频格式  m4a -> wav
-                m4a_to_wav_path = self.cfg['source_wav_output']
-                m4a_to_wav_file_path = os.path.dirname(m4a_to_wav_path)+"/"+str(uuid.uuid4())+".wav"
-                convert_m4a_to_wav(m4a_to_wav_path, m4a_to_wav_file_path)
-
-                """
-                remove_noise:
-                    param1: 需降噪的音频路径
-                    param2: 降噪后的音频路径
-                    return: 降噪成功返回param2, 降噪失败返回param1
-                """
-                target_path = f"{self.cfg['cache_folder']}/removed_noise_{time.time()}.wav"
-                start_time = time.time()
-                file_path = remove_noise(m4a_to_wav_file_path,target_path)
-                # 打印降噪时间保留三位小数
-                print(f"降噪耗时: {round(time.time() - start_time,3)} s")
-
-                with open(file_path, "rb") as file:
-                    files = {
-                        "file": file,
-                    }
-                    data = {
-                        "language": self.cfg["detect_language"]
-                    }
-                    # 使用其他识别模型进行语音识别
-                    split_audio_url = "http://127.0.0.1:10001/asr/client"
-                    response = requests.post(split_audio_url, files = files, data = data)
-                    if response.status_code == 200:
-                    # raw_subtitles: 识别结果
-                        raw_subtitles = response.json().get("data")
-                        self.source_srt_list = raw_subtitles
-                        self._save_srt_target(raw_subtitles, self.cfg["source_sub"])
-                    else:
-                        raise Exception("语音识别失败！")
-
-                # raw_subtitles = run_recogn(
-                #     # faster-whisper openai-whisper googlespeech
-                #     recogn_type=self.cfg["recogn_type"],
-                #     # 整体 预先 均等
-                #     split_type=self.cfg["split_type"],
-                #     uuid=self.uuid,
-                #     # 模型名
-                #     model_name=self.cfg["model_name"],
-                #     # 识别音频
-                #     audio_file=self.cfg["shibie_audio"],
-                #     detect_language=self.cfg["detect_language"],
-                #     cache_folder=self.cfg["cache_folder"],
-                #     is_cuda=self.cfg["cuda"],
-                #     subtitle_type=self.cfg.get("subtitle_type", 0),
-                #     target_code=(
-                #         self.cfg["target_language_code"] if self.shoud_trans else None
-                #     ),
-                #     inst=self,
-                # )
+                raw_subtitles = run_recogn(
+                    # faster-whisper openai-whisper googlespeech
+                    recogn_type=self.cfg["recogn_type"],
+                    # 整体 预先 均等
+                    split_type=self.cfg["split_type"],
+                    uuid=self.uuid,
+                    # 模型名
+                    model_name=self.cfg["model_name"],
+                    # 识别音频
+                    audio_file=self.cfg["shibie_audio"],
+                    detect_language=self.cfg["detect_language"],
+                    cache_folder=self.cfg["cache_folder"],
+                    is_cuda=self.cfg["cuda"],
+                    subtitle_type=self.cfg.get("subtitle_type", 0),
+                    target_code=(
+                        self.cfg["target_language_code"] if self.shoud_trans else None
+                    ),
+                    inst=self,
+                )
 
                 if self._exit():
                     return
@@ -1532,7 +1509,8 @@ class TransCreate(BaseTask):
             raise Exception(msg)
         self.precent = 99
         os.chdir(config.ROOT_DIR)
-        self._create_txt()
+        # 创建说明文本
+        # self._create_txt()
         self.precent = 100
         time.sleep(1)
         self.hasend = True

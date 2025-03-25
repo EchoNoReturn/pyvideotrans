@@ -53,3 +53,5 @@ samplerate;sys_platform == 'win32'
 gradio
 flask-cors
 oss2
+zhipuai
+ffmpeg-python

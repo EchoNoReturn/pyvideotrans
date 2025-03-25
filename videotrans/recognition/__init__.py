@@ -20,6 +20,7 @@ CUSTOM_API = 7
 GOOGLE_SPEECH = 8
 GEMINI_SPEECH = 9
 Faster_Whisper_XXL = 10
+SENSE_VOICE = 11
 
 RECOGN_NAME_LIST = [
     'faster-whisper(本地)' if config.defaulelang == 'zh' else 'Faster-whisper',
@@ -197,6 +198,9 @@ def run(*,
     if recogn_type==GEMINI_SPEECH:
         from ._gemini import GeminiRecogn
         return GeminiRecogn(**kwargs).run()
+    if recogn_type==SENSE_VOICE:
+        from._sensevoice import SenseVoiceRecogn
+        return SenseVoiceRecogn(**kwargs).run()
     if split_type == 'avg':
         from ._average import FasterAvg
         return FasterAvg(**kwargs).run()
