@@ -478,8 +478,8 @@ if __name__ == "__main__":
             "refer_audio": data.get("refer_audio", ""),# 参考音频oss
             "refer_text": data.get("refer_text", ""),# 参考文本
             "voice_rate": data.get("voice_rate", "+0%"),
-            "voice_autorate": bool(data.get("voice_autorate", False)),
-            "video_autorate": bool(data.get("video_autorate", False)),
+            "voice_autorate": bool(data.get("voice_autorate", True)),
+            "video_autorate": bool(data.get("video_autorate", True)),
             "volume": data.get("volume", "+0%"),
             "pitch": data.get("pitch", "+0Hz"),
             "subtitle_type": int(data.get("subtitle_type", 0)),

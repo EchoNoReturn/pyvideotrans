@@ -85,11 +85,12 @@ class CosyVoice(BaseTTS):
                         )
                         return
                     # 克隆音色
-                    data["reference_audio"] = self._audio_to_base64(
-                        data_item["ref_wav"]
-                    )
+                    # data["reference_audio"] = self._audio_to_base64(
+                    #     data_item["ref_wav"]
+                    # )
+                    # data["encode"] = "base64"
+                    data["reference_audio"] = data_item["ref_wav"]
                     api_url += "/clone_mul"
-                    data["encode"] = "base64"
                 elif role == "clone-single":
                     # 自定义音色
                     data["reference_audio"] = data_item["ref_audio"]
@@ -113,6 +114,7 @@ class CosyVoice(BaseTTS):
                     proxies={"http": "", "https": ""},
                     timeout=3600,
                 )
+                print(f"data:{data}")
 
             if response.status_code != 200:
                 # 如果是JSON数据，使用json()方法解析
