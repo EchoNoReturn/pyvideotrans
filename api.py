@@ -479,7 +479,7 @@ if __name__ == "__main__":
             "refer_text": data.get("refer_text", ""),# 参考文本
             "voice_rate": data.get("voice_rate", "+0%"),
             "voice_autorate": bool(data.get("voice_autorate", True)),
-            "video_autorate": bool(data.get("video_autorate", True)),
+            "video_autorate": bool(data.get("video_autorate", False)),
             "volume": data.get("volume", "+0%"),
             "pitch": data.get("pitch", "+0Hz"),
             "subtitle_type": int(data.get("subtitle_type", 0)),
@@ -539,7 +539,16 @@ if __name__ == "__main__":
         obj["cache_folder"] = config.TEMP_DIR + f'/{obj["uuid"]}'
         Path(obj["target_dir"]).mkdir(parents=True, exist_ok=True)
         cfg.update(obj)
-
+        
+        # 获取用户id
+        endpoint = f"/vid/video/getMemberId?name={data.get("memberId",None)}"
+        headers = {"Content-Type": "application/json"}
+        respone = http_request.send_request(endpoint=endpoint,headers=headers)
+        cfg["record_id"] = respone["msg"]
+        if(respone["code"] != 0):
+            return jsonify({"code" : 1, "msg":"用户信息获取出错"})
+        else:
+            cfg['memberId'] = respone["msg"]
         # 入库
         endpoint = "/vid/video/copyModify"
         headers = {
@@ -552,7 +561,7 @@ if __name__ == "__main__":
             "uploadTime": data.get("uploadTime", int(time.time() * 1000)),
             "ossVideoKey":  data.get("object_key"),
             "taskId": obj["uuid"],
-            "memberId": data("memberId",None)
+            "memberId":  cfg['memberId'],
         }
         respone = http_request.send_request(endpoint=endpoint,body=video_data,headers=headers)
         cfg["record_id"] = respone["msg"]
