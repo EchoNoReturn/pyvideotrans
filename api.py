@@ -551,7 +551,8 @@ if __name__ == "__main__":
             "tarLanguage": cfg["target_language"],
             "uploadTime": data.get("uploadTime", int(time.time() * 1000)),
             "ossVideoKey":  data.get("object_key"),
-            "taskId": obj["uuid"]
+            "taskId": obj["uuid"],
+            "memberId": data("memberId",None)
         }
         respone = http_request.send_request(endpoint=endpoint,body=video_data,headers=headers)
         cfg["record_id"] = respone["msg"]
