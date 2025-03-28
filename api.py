@@ -558,6 +558,7 @@ if __name__ == "__main__":
             "processStatus" : "VIDEO_STATUS_PROCEED",
             "souLanguage": cfg["source_language"],
             "tarLanguage": cfg["target_language"],
+            "hashCode": cfg["hashCode"],
             "uploadTime": data.get("uploadTime", int(time.time() * 1000)),
             "ossVideoKey":  data.get("object_key"),
             "taskId": obj["uuid"],
