@@ -542,7 +542,7 @@ if __name__ == "__main__":
         cfg.update(obj)
         
         # 获取用户id
-        endpoint = f"/vid/video/getMemberId?name={data.get("memberId",None)}"
+        endpoint = f"/vid/video/getMemberId?name={data.get('memberId',None)}"
         headers = {"Content-Type": "application/json"}
         respone = http_request.send_request(endpoint=endpoint,headers=headers)
         cfg["record_id"] = respone["msg"]
