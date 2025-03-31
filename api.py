@@ -462,7 +462,7 @@ if __name__ == "__main__":
             "oss_key":  data.get("object_key", None),
             "is_separate": bool(data.get("is_separate", False)),
             "back_audio": data.get("back_audio", ""),
-            "hashCode": data.get("hashCode",""),
+            "hashCode": data.get("hashCode"),
             # 识别
             "recogn_type": 0,
             "split_type": data.get("split_type", "all"),
