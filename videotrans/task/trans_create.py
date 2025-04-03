@@ -1,4 +1,5 @@
 import copy
+import json
 import math
 import os
 import re
@@ -229,6 +230,8 @@ class TransCreate(BaseTask):
             return
         # 将原始视频分离为无声视频和音频
         self._split_wav_novicemp4()
+        # 记录原视频信息
+        self.cfg["origin_video_data"] = self._get_video_data(self.cfg["name"])
         self._end_timer("预处理阶段")
 
     # （2）开始语音识别
@@ -595,7 +598,9 @@ class TransCreate(BaseTask):
         oss_headers = {"Content-Type": "video/mp4", "x-oss-meta-file-ext": ".mp4"}
         with open(self.cfg["targetdir_mp4"], "rb") as file:
             bucket.put_object( object_key, file, headers=oss_headers)
-
+        
+        result_video_data = self._get_video_data(self.cfg["targetdir_mp4"]); 
+            
         # 入库
         endpoint = "/vid/video/copyModify"
         headers = {
@@ -609,6 +614,7 @@ class TransCreate(BaseTask):
             if "duration" in stage
         )
         execution_logs = []
+        execution_logs.append(f"原视频信息：{str(self.cfg["origin_video_data"])}")
         for stage, times in self.execution_times.items():
             if "duration" in times:
                 percent = (times["duration"] / total_time) * 100 if total_time > 0 else 0
@@ -617,6 +623,7 @@ class TransCreate(BaseTask):
                 config.logger.info(log_entry)
         total_time_log = f"总耗时: {total_time:.2f}s"
         execution_logs.append(total_time_log)
+        execution_logs.append(f"结果视频信息：{str(result_video_data)}")
         config.logger.info(total_time_log)
 
         # 将日志信息转化为字符串
@@ -1629,3 +1636,23 @@ class TransCreate(BaseTask):
                     self.execution_times[stage]["end"]
                     - self.execution_times[stage]["start"]
             )
+
+    # 获取视频元信息
+    def _get_video_data(self,path:str):
+        # 获取JSON格式的完整信息
+        metadata = tools.runffprobe([
+            "-v", "error",
+            "-show_format",
+            "-show_streams",
+            "-of", "json",
+            self.cfg["name"]
+        ])
+        data = json.loads(metadata)
+        video_data = {
+            "duration": float(data["format"]["duration"]),
+            "size": int(data["format"]["size"]),
+            "width": int(data["streams"][0]["width"]),
+            "height": int(data["streams"][0]["height"]),
+            "codec": data["streams"][0]["codec_name"]
+        }
+        return video_data
