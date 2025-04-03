@@ -598,7 +598,6 @@ class TransCreate(BaseTask):
         oss_headers = {"Content-Type": "video/mp4", "x-oss-meta-file-ext": ".mp4"}
         with open(self.cfg["targetdir_mp4"], "rb") as file:
             bucket.put_object( object_key, file, headers=oss_headers)
-        
         result_video_data = self._get_video_data(self.cfg["targetdir_mp4"]); 
             
         # 入库
@@ -1645,7 +1644,7 @@ class TransCreate(BaseTask):
             "-show_format",
             "-show_streams",
             "-of", "json",
-            self.cfg["name"]
+            path
         ])
         data = json.loads(metadata)
         video_data = {
