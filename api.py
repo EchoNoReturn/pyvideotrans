@@ -491,6 +491,10 @@ if __name__ == "__main__":
             # 存储桶
             "bucket": bucket,
         }
+
+        # 修改翻译渠道
+        cfg['translate_type'] = 21
+
         # 自定义音色
         if cfg["voice_role"] == "clone-single" and cfg["refer_audio"] and cfg["voice_rate"]:
             cfg["refer_audio"] = bucket.sign_url("GET", cfg["refer_audio"], 3600)
@@ -662,6 +666,34 @@ if __name__ == "__main__":
             return_data[task_id] = _get_task_data(task_id)
         return jsonify({"code": 0, "msg": "ok", "data": return_data})
 
+    # 获取翻译信息
+    # @app.route("/task_id", methods=[ "GET"])
+    def get_translator(task_id="", no_response=False):
+            if not task_id:
+                task_id = request.args.get("task_id")
+            # task_id = request.args.get("taskid")
+            import os
+            import json
+            from pathlib import Path
+            current_file = os.path.abspath(__file__)
+            project_root = os.path.dirname(current_file)
+            file_path = os.path.join(project_root, "apidata", task_id)
+            file_name = task_id+".json"
+            path = Path(file_path)/file_name
+            if not path.exists():
+                if no_response:
+                    # print(f"文件不存在：{path}")
+                    return ""
+                # return jsonify({"code": 1, "msg": None})
+                return ""
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.loads(f.read())
+                # if no_response:
+                    # print(f"文件内容：{data}")
+                    # return data
+                # return jsonify({"code": 1, "msg": data})
+                return data['text']
+
 
     # 获取文件上传地址
     @app.route("/get_upload_url", methods=["POST"])
@@ -713,30 +745,46 @@ if __name__ == "__main__":
         except Exception as e:
             print(e)
             return None
-
+    
+    def _cobine_subtitle_translation_content(origin_msg, stc):
+        return f"""
+=== 执行状态信息 ===
+{origin_msg}
+=== 翻译内容 ===
+{stc}
+===========
+        """
 
     def _get_task_data(task_id,id):
+        stc = get_translator(task_id, no_response=True)
+        # print(f"stc:{str(stc)}")
+                
         file = PROCESS_INFO + f"/{task_id}.json"
         if not Path(file).is_file():
             if task_id in config.uuid_logs_queue:
-                return {"code": -1, "msg": _get_order(task_id)}
-
+                msg = _cobine_subtitle_translation_content(_get_order(task_id), stc)
+                return {"code": -1, "msg": msg}
             return {"code": 1, "msg": f"该任务 {task_id} 不存在"}
 
         try:
             data = json.loads(Path(file).read_text(encoding="utf-8"))
         except Exception as e:
-            return {"code": -1, "msg": Path(file).read_text(encoding="utf-8")}
+            msg = _cobine_subtitle_translation_content(Path(file).read_text(encoding="utf-8"), stc)
+            return {"code": -1, "msg": msg}
 
         if data["type"] == "error":
-            return {"code": 3, "msg": data["text"]}
+            msg = _cobine_subtitle_translation_content(data["text"], stc)
+            return {"code": 3, "msg": msg}
         if data["type"] in LOGS_STATUS_LIST:
             text = data.get("text", "").strip()
-            return {"code": -1, "msg": text if text else "等待处理中"}
+            msg = text if text else "等待处理中"
+            res_msg = _cobine_subtitle_translation_content(msg, stc)
+            return {"code": -1, "msg": res_msg}
         # 完成，输出所有文件
         file_list = _get_files_in_directory(f"{TARGET_DIR}/{task_id}")
         if len(file_list) < 1:
-            return {"code": 4, "msg": "未生成任何结果文件，可能出错了"}
+            tip = "未生成任何结果文件，可能出错了"
+            return {"code": 4, "msg": _cobine_subtitle_translation_content(tip, stc)}
 
         absolute_path = [f"{TARGET_DIR}/{task_id}/{name}" for name in file_list]
         url = [
@@ -766,10 +814,9 @@ if __name__ == "__main__":
 
         if signed_url is None:
             raise Exception("无法生成签名 URL，请检查网络或配置")
-
-        return {
+        res = {
             "code": 0,
-            "msg": "ok",
+            "msg": _cobine_subtitle_translation_content("ok", stc),
             "data": {
                 "absolute_path": absolute_path,
                 "url": url,
@@ -777,6 +824,7 @@ if __name__ == "__main__":
                 "file_ext":".mp4",
             },
         }
+        return res
 
     def _get_order(task_id):
         order_num = 0
