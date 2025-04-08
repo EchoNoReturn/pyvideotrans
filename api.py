@@ -670,7 +670,8 @@ if __name__ == "__main__":
     # @app.route("/task_id", methods=[ "GET"])
     def get_translator(task_id="", no_response=False):
             if not task_id:
-                task_id = request.args.get("task_id")
+                return ""
+                # task_id = request.args.get("task_id")
             # task_id = request.args.get("taskid")
             import os
             import json
