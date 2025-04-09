@@ -668,7 +668,7 @@ if __name__ == "__main__":
 
     # 获取翻译信息
     # @app.route("/task_id", methods=[ "GET"])
-    def get_translator(task_id="", no_response=False):
+    def get_translator(task_id="", id="",no_response=False):
             if not task_id:
                 return ""
                 # task_id = request.args.get("task_id")
@@ -689,10 +689,21 @@ if __name__ == "__main__":
                 return ""
             with open(path, 'r', encoding='utf-8') as f:
                 data = json.loads(f.read())
-                # if no_response:
-                    # print(f"文件内容：{data}")
-                    # return data
-                # return jsonify({"code": 1, "msg": data})
+                if data['is_save'] == False:
+                    if data['is_ok']:
+                        endpoint = f"/vid/video/saveTranslateContent"
+                        headers = {"Content-Type": "application/json"}
+                        body = {
+                            "id":id,
+                            "translateContent":data['text']
+                        }
+                        respone = http_request.send_request(endpoint=endpoint,body=body,headers=headers)
+                        if respone.get('code') != 0:
+                            raise Exception("识别和翻译内容保存失败")
+                        # print("======= 保存成功 ========")
+                        data['is_save'] = True
+                        with open(Path(path),'w',encoding='utf-8') as f:
+                            json.dump(data,f,ensure_ascii=False,indent=4)
                 return data['text']
 
 
@@ -757,7 +768,7 @@ if __name__ == "__main__":
         """
 
     def _get_task_data(task_id,id):
-        stc = get_translator(task_id, no_response=True)
+        stc = get_translator(task_id = task_id,id = id, no_response=True)
         # print(f"stc:{str(stc)}")
                 
         file = PROCESS_INFO + f"/{task_id}.json"

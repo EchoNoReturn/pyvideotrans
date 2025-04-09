@@ -57,7 +57,7 @@ class Zhipu(BaseTrans):
         os.makedirs(Path(file_path), exist_ok=True)
         if not path.exists():
             with open(path, 'w', encoding='utf-8') as f:
-                json.dump({"text": ""}, f, ensure_ascii=False, indent=4)
+                json.dump({"text": "","is_ok":False,"is_save":False}, f, ensure_ascii=False, indent=4)
 
         with open(path,'r',encoding='utf-8') as f:
             data = json.loads(f.read())
@@ -75,5 +75,8 @@ class Zhipu(BaseTrans):
                 with open(Path(path),'w',encoding='utf-8') as f:
                     json.dump(data,f,ensure_ascii=False,indent=4)
                 item['text'] = new_text
+        data['is_ok'] = True
+        with open(Path(path),'w',encoding='utf-8') as f:
+            json.dump(data,f,ensure_ascii=False,indent=4)
         return self.text_list
         
