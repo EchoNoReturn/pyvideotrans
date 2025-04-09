@@ -85,6 +85,7 @@ def get_gradio_demo():
         ("tiny", "tiny"),
         ("medium", "medium"),
         ("large-v3", "large-v3"),
+        ("large-v3-turbo", "large-v3-turbo"),
     ]
     # 字幕嵌入类型
     subtitle_types = [

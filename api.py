@@ -466,11 +466,11 @@ if __name__ == "__main__":
             # 识别
             "recogn_type": 0,
             "split_type": data.get("split_type", "all"),
-            "model_name": "large-v3",
+            "model_name": "large-v3-turbo",     # options: tiny/medium/large-v3/large-v3-turbo
             "cuda": bool(data.get("is_cuda", False)),
             "subtitles": data.get("subtitles", ""),
             # 翻译
-            "translate_type": int(data.get("translate_type", 1)),
+            "translate_type": int(data.get("translate_type", 21)), # 21 ==> 智谱AI翻译
             "target_language": data.get("target_language"),
             "source_language": data.get("source_language"),
             # 配音
@@ -491,9 +491,6 @@ if __name__ == "__main__":
             # 存储桶
             "bucket": bucket,
         }
-
-        # 修改翻译渠道
-        cfg['translate_type'] = 21
 
         # 自定义音色
         if cfg["voice_role"] == "clone-single" and cfg["refer_audio"] and cfg["voice_rate"]:

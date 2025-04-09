@@ -333,6 +333,8 @@ class TransCreate(BaseTask):
                     type="replace_subtitle",
                 )
             else:
+                model= self.cfg["model_name"]
+                print(f"语音识别模型 ==========> {model}")
                 # file_path = self.cfg["shibie_audio"]
                 # with open(file_path, "rb") as file:
                 #     files = {
