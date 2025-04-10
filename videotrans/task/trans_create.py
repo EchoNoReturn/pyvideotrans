@@ -615,7 +615,8 @@ class TransCreate(BaseTask):
             if "duration" in stage
         )
         execution_logs = []
-        execution_logs.append(f"原视频信息：{str(self.cfg["origin_video_data"])}")
+        # execution_logs.append(f"原视频信息：{str(self.cfg["origin_video_data"])}")
+        sou_data = self.cfg["origin_video_data"]
         for stage, times in self.execution_times.items():
             if "duration" in times:
                 percent = (times["duration"] / total_time) * 100 if total_time > 0 else 0
@@ -624,7 +625,8 @@ class TransCreate(BaseTask):
                 config.logger.info(log_entry)
         total_time_log = f"总耗时: {total_time:.2f}s"
         execution_logs.append(total_time_log)
-        execution_logs.append(f"结果视频信息：{str(result_video_data)}")
+        # execution_logs.append(f"结果视频信息：{str(result_video_data)}")
+        tar_data = result_video_data
         config.logger.info(total_time_log)
 
         # 将日志信息转化为字符串
@@ -637,6 +639,13 @@ class TransCreate(BaseTask):
             "ossProcKey": object_key,
             "procEndTime": int(time.time() * 1000),
             "result": execution_logs_str,
+            "souDuration": round(sou_data["duration"], 2),
+            "souSize": round(sou_data["size"] / 1024 / 1024, 3),
+            "tarDuration": round(tar_data["duration"], 2),
+            "tarSize": round(tar_data["size"] / 1024 / 1024, 3),
+            "codec": sou_data["codec"],
+            "width": sou_data["width"],
+            "height": sou_data["height"],
         }
 
         # 发送请求
