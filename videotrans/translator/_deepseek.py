@@ -26,16 +26,15 @@ class Deepseek(BaseTrans):
             # model is options
             model="deepseek-llm:7b",
             messages=[
-                {
-                    "role": "system",
-                    "content": "你是一个专业的多语言翻译专家."
-                },
-                {
-                    "role": "user",
-                    "content": f"请将我发送给你的{old_language}内容翻译为{new_language}，仅返回翻译即可，"
-                               f"不要回答问题、不要确认、不要回复本条内容，从下一行开始翻译\n{content}"
-                }
-            ]
+                    {
+                        "role": "system",
+                        "content": "你是一个专业的多语言翻译专家，具备以下核心能力：.能够完整识别并翻译所有输入内容；擅长处理长文本和复杂句式结构；严格遵循翻译指令，确保输出完整性；对模糊表述会采用最可能的译法并标注（如有必要）"
+                    },
+                    {
+                        "role": "user",
+                        "content": f"请执行以下翻译任务： 翻译要求：1. 将以下{old_language}内容完整翻译为{new_language}必须逐句翻译，不得遗漏任何内容. 保持原文段落结构. 禁止添加/删除/修改原文信息； 输出规范：仅输出翻译文本，从下一行直接开始；不包含任何解释性文字；不重复指令内容；不添加标题或分隔符； 原文内容：{content}"
+                    }
+            ]      
         ).choices[0].message.content
 
     def run(self):
