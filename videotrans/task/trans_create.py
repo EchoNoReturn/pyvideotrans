@@ -1657,24 +1657,24 @@ class TransCreate(BaseTask):
             path
         ])
         data = json.loads(metadata)
-        # video_stream = None
-        # for stream in data.get("streams", []):
-        #     if stream.get("codec_type") == "video":
-        #         video_stream = stream
-        #         break
-        # if not video_stream:
-        #     raise ValueError(f"No video stream found in file: {path}")
-        # required_fields = ["width", "height", "codec_name"]
-        # for field in required_fields:
-        #     if field not in video_stream:
-        #         raise ValueError(f"Video stream is missing required field: {field}")
-        # video_data = {
-        #     "duration": float(data["format"]["duration"]),
-        #     "size": int(data["format"]["size"]),
-        #     "width": int(video_stream["width"]),
-        #     "height": int(video_stream["height"]),
-        #     "codec": video_stream["codec_name"]
-        # }
+        video_stream = None
+        for stream in data.get("streams", []):
+            if stream.get("codec_type") == "video":
+                video_stream = stream
+                break
+        if not video_stream:
+            raise ValueError(f"No video stream found in file: {path}")
+        required_fields = ["width", "height", "codec_name"]
+        for field in required_fields:
+            if field not in video_stream:
+                raise ValueError(f"Video stream is missing required field: {field}")
+        video_data = {
+            "duration": float(data["format"]["duration"]),
+            "size": int(data["format"]["size"]),
+            "width": int(video_stream["width"]),
+            "height": int(video_stream["height"]),
+            "codec": video_stream["codec_name"]
+        }
         video_data = {
             "duration": float(data["format"]["duration"]),
             "size": int(data["format"]["size"]),
