@@ -52,6 +52,8 @@ class Qwen(BaseTrans):
 
     def run(self):
         print("千问AI翻译启动")
+        if self.source_code == "auto":
+            raise Exception("该翻译引擎不支持自动识别")
         import os
         import json
         from pathlib import Path
