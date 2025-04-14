@@ -8,17 +8,6 @@ class Deepseek(BaseTrans):
         super().__init__(*args, **kwargs)
 
     @staticmethod
-    def contains_chinese(text):
-        pattern = re.compile('[\u4e00-\u9fa5]')
-        if bool(pattern.search(text)):
-            return True
-        elif ":" in text:
-            return True
-        elif "：" in text:
-            return True
-        return False
-
-    @staticmethod
     def map_language(language_code):
         language_map = {
             "zh-cn": "中文",
@@ -50,6 +39,30 @@ class Deepseek(BaseTrans):
         ).choices[0].message.content
 
     def run(self):
+        import os
+        import json
+        from pathlib import Path
+        current_file = os.path.abspath(__file__)
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
+        uuid = self.uuid
+
+        # file_path = os.path.join(project_root, "apidata", "processinfo")
+        # file_name = uuid+".json"
+
+
+        file_path = os.path.join(project_root, "apidata", uuid)
+        file_name = uuid+".json"
+
+        path = Path(file_path)/file_name
+
+        os.makedirs(Path(file_path), exist_ok=True)
+        if not path.exists():
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump({"text": "","is_ok":False,"is_save":False}, f, ensure_ascii=False, indent=4)
+
+        with open(path,'r',encoding='utf-8') as f:
+            data = json.loads(f.read())
+            data['text'] = ""
         if self.source_code == 'auto':
             old_language = ''
         else:
@@ -59,8 +72,11 @@ class Deepseek(BaseTrans):
             if item is not None and 'text' in item:
                 text = item['text']
                 content = self.openAI(text, old_language, new_language)
-                if self.contains_chinese(content):
-                    item['text'] = ''
-                else:
-                    item['text'] = content
+                data['text'] = data['text'] + text+ "\n" + content + "\n"
+                with open(Path(path),'w',encoding='utf-8') as f:
+                    json.dump(data,f,ensure_ascii=False,indent=4)
+                item['text'] = content
+        data['is_ok'] = True
+        with open(Path(path),'w',encoding='utf-8') as f:
+            json.dump(data,f,ensure_ascii=False,indent=4)
         return self.text_list
