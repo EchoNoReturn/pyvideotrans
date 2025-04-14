@@ -1675,11 +1675,4 @@ class TransCreate(BaseTask):
             "height": int(video_stream["height"]),
             "codec": video_stream["codec_name"]
         }
-        video_data = {
-            "duration": float(data["format"]["duration"]),
-            "size": int(data["format"]["size"]),
-            "width": int(data["streams"][0]["width"]),
-            "height": int(data["streams"][0]["height"]),
-            "codec": data["streams"][0]["codec_name"]
-        }
         return video_data
