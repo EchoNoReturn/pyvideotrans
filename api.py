@@ -32,10 +32,10 @@ if __name__ == "__main__":
 
     # 设置根目录和默认主机、端口
     ROOT_DIR = config.ROOT_DIR
-    HOST = "127.0.0.1"
-    PORT = 9011
-    # HOST = "0.0.0.0"
-    # PORT = 8086
+    # HOST = "127.0.0.1"
+    # PORT = 9011
+    HOST = "0.0.0.0"
+    PORT = 8086
 
     # 读取 host.txt 设置主机和端口
     host_file = Path(ROOT_DIR + "/host.txt")
@@ -555,7 +555,6 @@ if __name__ == "__main__":
         endpoint = f"/vid/video/getMemberId?name={data.get('memberId',None)}"
         headers = {"Content-Type": "application/json"}
         response = http_request.send_request(endpoint=endpoint, headers=headers)
-        cfg["record_id"] = response["msg"]
         if response["code"] != 0:
             return jsonify({"code": 1, "msg": "用户信息获取出错"})
         else:
@@ -592,6 +591,7 @@ if __name__ == "__main__":
             "Content-Type": "application/json",
         }
         video_data = {
+            "id": cfg["record_id"],
             "tarLanguage": cfg["target_language"],
             "hashCode": cfg["hashCode"],
         }
@@ -599,6 +599,18 @@ if __name__ == "__main__":
             endpoint=endpoint, body=video_data, headers=headers
         )
         if response["code"] == 0:
+            # 重定向
+            endpoint = "/vid/video/copyModify"
+            headers = {
+                "Content-Type": "application/json",
+            }
+            video_data = {
+                "id": cfg["record_id"],
+                "processStatus": "VIDEO_STATUS_REDIRECT",
+            }
+            response = http_request.send_request(
+                endpoint=endpoint, body=video_data, headers=headers
+            )
             signed_url = bucket.sign_url("GET", response["msg"], 3600)
             if signed_url != None:
                 return jsonify({"code": 403, "signed_url": signed_url})
