@@ -468,7 +468,7 @@ if __name__ == "__main__":
             # 识别
             "recogn_type": 0,
             "split_type": data.get("split_type", "all"),
-            "model_name": "tiny",  # options: tiny/medium/large-2/large-v3/large-v3-turbo
+            "model_name": "large-v3-turbo",  # options: tiny/medium/large-2/large-v3/large-v3-turbo
             "cuda": bool(data.get("is_cuda", False)),
             "subtitles": data.get("subtitles", ""),
             # 翻译
