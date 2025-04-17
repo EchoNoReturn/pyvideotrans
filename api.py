@@ -142,6 +142,7 @@ if __name__ == "__main__":
         print(res.json())
     ```
     """
+
     @app.route("/tts", methods=["POST"])
     def tts():
         data = request.json
@@ -157,8 +158,8 @@ if __name__ == "__main__":
                 return jsonify({"code": 1, "msg": f"The file {name} is not exist"})
         else:
             tmp_file = (
-                    config.TEMP_DIR
-                    + f"/tts-srt-{time.time()}-{random.randint(1, 9999)}.srt"
+                config.TEMP_DIR
+                + f"/tts-srt-{time.time()}-{random.randint(1, 9999)}.srt"
             )
             is_srt = tools.is_srt_string(name)
             Path(tmp_file).write_text(
@@ -203,7 +204,6 @@ if __name__ == "__main__":
         )
         return jsonify({"code": 0, "task_id": obj["uuid"]})
 
-
     # 第2个接口 /translate_srt
     """
     字幕翻译接口
@@ -237,6 +237,7 @@ if __name__ == "__main__":
     ```
     
     """
+
     @app.route("/translate_srt", methods=["POST"])
     def translate_srt():
         data = request.json
@@ -252,8 +253,8 @@ if __name__ == "__main__":
                 return jsonify({"code": 1, "msg": f"The file {name} is not exist"})
         else:
             tmp_file = (
-                    config.TEMP_DIR
-                    + f"/trans-srt-{time.time()}-{random.randint(1, 9999)}.srt"
+                config.TEMP_DIR
+                + f"/trans-srt-{time.time()}-{random.randint(1, 9999)}.srt"
             )
             is_srt = tools.is_srt_string(name)
             Path(tmp_file).write_text(
@@ -288,7 +289,6 @@ if __name__ == "__main__":
             text=f"Currently in queue No.{len(config.trans_queue)}", uuid=obj["uuid"]
         )
         return jsonify({"code": 0, "task_id": obj["uuid"]})
-
 
     # 第3个接口 /recogn
     """
@@ -326,6 +326,7 @@ if __name__ == "__main__":
         print(res.json())
     
     """
+
     @app.route("/recogn", methods=["POST"])
     def recogn():
         data = request.json
@@ -370,7 +371,6 @@ if __name__ == "__main__":
             text=f"Currently in queue No.{len(config.prepare_queue)}", uuid=obj["uuid"]
         )
         return jsonify({"code": 0, "task_id": obj["uuid"]})
-
 
     # 第4个接口
     """
@@ -441,13 +441,15 @@ if __name__ == "__main__":
         print(res.json())
     
     """
+
     @app.route("/trans_video", methods=["POST"])
     def trans_video():
         data = json.loads(request.json) if type(request.json) == str else request.json
         name = data.get("name", "")
         if not name:
             name = _download_file(
-                data.get("object_key"), os.path.join(config.TEMP_DIR,"video_input_cache")
+                data.get("object_key"),
+                os.path.join(config.TEMP_DIR, "video_input_cache"),
             )
             if not name:
                 return jsonify(
@@ -459,14 +461,14 @@ if __name__ == "__main__":
         cfg = {
             # 通用
             "name": name,
-            "oss_key":  data.get("object_key", None),
+            "oss_key": data.get("object_key", None),
             "is_separate": bool(data.get("is_separate", False)),
             "back_audio": data.get("back_audio", ""),
             "hashCode": data.get("hashCode"),
             # 识别
             "recogn_type": 0,
             "split_type": data.get("split_type", "all"),
-            "model_name": "large-v3-turbo",     # options: tiny/medium/large-2/large-v3/large-v3-turbo
+            "model_name": "large-v3-turbo",  # options: tiny/medium/large-2/large-v3/large-v3-turbo
             "cuda": bool(data.get("is_cuda", False)),
             "subtitles": data.get("subtitles", ""),
             # 翻译
@@ -475,9 +477,9 @@ if __name__ == "__main__":
             "source_language": data.get("source_language"),
             # 配音
             "tts_type": 1,
-            "voice_role": data.get("voice_role", "clone"),# clone-single
-            "refer_audio": data.get("refer_audio", ""),# 参考音频oss
-            "refer_text": data.get("refer_text", ""),# 参考文本
+            "voice_role": data.get("voice_role", "clone"),  # clone-single
+            "refer_audio": data.get("refer_audio", ""),  # 参考音频oss
+            "refer_text": data.get("refer_text", ""),  # 参考文本
             "voice_rate": data.get("voice_rate", "+0%"),
             "voice_autorate": bool(data.get("voice_autorate", True)),
             "video_autorate": bool(data.get("video_autorate", False)),
@@ -493,10 +495,14 @@ if __name__ == "__main__":
         }
 
         # 修改翻译渠道
-        cfg['translate_type'] = 19
+        cfg["translate_type"] = 19
 
         # 自定义音色
-        if cfg["voice_role"] == "clone-single" and cfg["refer_audio"] and cfg["voice_rate"]:
+        if (
+            cfg["voice_role"] == "clone-single"
+            and cfg["refer_audio"]
+            and cfg["voice_rate"]
+        ):
             cfg["refer_audio"] = bucket.sign_url("GET", cfg["refer_audio"], 3600)
 
         # 语音识别验证
@@ -524,9 +530,9 @@ if __name__ == "__main__":
 
         # 配音验证
         if (
-                cfg["voice_role"]
-                and cfg["voice_role"].strip().lower() != "No"
-                and cfg["target_language"]
+            cfg["voice_role"]
+            and cfg["voice_role"].strip().lower() != "No"
+            and cfg["target_language"]
         ):
             is_allow_lang = tts_model.is_allow_lang(
                 langcode=cfg["target_language"], tts_type=cfg["tts_type"]
@@ -544,44 +550,67 @@ if __name__ == "__main__":
         obj["cache_folder"] = config.TEMP_DIR + f'/{obj["uuid"]}'
         Path(obj["target_dir"]).mkdir(parents=True, exist_ok=True)
         cfg.update(obj)
-        
+
         # 获取用户id
         endpoint = f"/vid/video/getMemberId?name={data.get('memberId',None)}"
         headers = {"Content-Type": "application/json"}
-        respone = http_request.send_request(endpoint=endpoint,headers=headers)
-        cfg["record_id"] = respone["msg"]
-        if(respone["code"] != 0):
-            return jsonify({"code" : 1, "msg":"用户信息获取出错"})
+        response = http_request.send_request(endpoint=endpoint, headers=headers)
+        cfg["record_id"] = response["msg"]
+        if response["code"] != 0:
+            return jsonify({"code": 1, "msg": "用户信息获取出错"})
         else:
-            cfg['memberId'] = respone["msg"]
+            cfg["memberId"] = response["msg"]
+
         # 入库
         endpoint = "/vid/video/copyModify"
         headers = {
             "Content-Type": "application/json",
         }
         video_data = {
-            "processStatus" : "VIDEO_STATUS_PROCEED",
+            "processStatus": "VIDEO_STATUS_PROCEED",
             "souLanguage": cfg["source_language"],
             "tarLanguage": cfg["target_language"],
             "hashCode": cfg["hashCode"],
             "uploadTime": data.get("uploadTime", int(time.time() * 1000)),
-            "ossVideoKey":  data.get("object_key"),
+            "ossVideoKey": data.get("object_key"),
             "taskId": obj["uuid"],
-            "memberId":  cfg['memberId'],
+            "memberId": cfg["memberId"],
+            "recModel": cfg["recogn_type"],
+            "traModel": cfg["translate_type"],
+            "dubModel": cfg["tts_type"],
         }
-        respone = http_request.send_request(endpoint=endpoint,body=video_data,headers=headers)
-        cfg["record_id"] = respone["msg"]
-        if(respone["code"] != 0):
-            return jsonify({"code" : 1, "msg":"视频信息记录出错"})
-        
+        response = http_request.send_request(
+            endpoint=endpoint, body=video_data, headers=headers
+        )
+        cfg["record_id"] = response["msg"]
+        if response["code"] != 0:
+            return jsonify({"code": 1, "msg": "视频信息记录出错"})
+
+        # 判断是否存在相同翻译视频
+        endpoint = "/vid/video/isExist"
+        headers = {
+            "Content-Type": "application/json",
+        }
+        video_data = {
+            "tarLanguage": cfg["target_language"],
+            "hashCode": cfg["hashCode"],
+        }
+        response = http_request.send_request(
+            endpoint=endpoint, body=video_data, headers=headers
+        )
+        cfg["record_id"] = response["msg"]
+        if response["code"] == 0:
+            signed_url = bucket.sign_url("GET", response["msg"], 3600)
+            if signed_url != None:
+                return jsonify({"code": 403, "signed_url": signed_url})
+
         config.current_status = "ing"
         trk = TransCreate(cfg)
         config.prepare_queue.append(trk)
         tools.set_process(
             text=f"Currently in queue No.{len(config.prepare_queue)}", uuid=obj["uuid"]
-        )                                              
-        return jsonify({"code": 0, "task_id": obj["uuid"],"id":cfg["record_id"]})
-
+        )
+        return jsonify({"code": 0, "task_id": obj["uuid"], "id": cfg["record_id"]})
 
     # 获取任务进度接口
     """
@@ -637,6 +666,7 @@ if __name__ == "__main__":
       "msg": "ok"
     }
     """
+
     @app.route("/task_status", methods=["POST", "GET"])
     def task_status():
         # 1. 优先从 GET 请求参数中获取 task_id
@@ -650,8 +680,7 @@ if __name__ == "__main__":
             task_id = request.json.get("task_id")
         if not task_id:
             return jsonify({"code": 1, "msg": "The parem  task_id is not set"})
-        return _get_task_data(task_id,id)
-
+        return _get_task_data(task_id, id)
 
     # 获取多个任务 前台 content-type:application/json, 数据 {task_id_list:[id1,id2,....]}
     @app.route("/task_status_list", methods=["POST", "GET"])
@@ -668,44 +697,43 @@ if __name__ == "__main__":
 
     # 获取翻译信息
     # @app.route("/task_id", methods=[ "GET"])
-    def get_translator(task_id="", id="",no_response=False):
-            if not task_id:
-                return ""
-                # task_id = request.args.get("task_id")
-            # task_id = request.args.get("taskid")
-            import os
-            import json
-            from pathlib import Path
-            current_file = os.path.abspath(__file__)
-            project_root = os.path.dirname(current_file)
-            file_path = os.path.join(project_root, "apidata", task_id)
-            file_name = task_id+".json"
-            path = Path(file_path)/file_name
-            if not path.exists():
-                if no_response:
-                    # print(f"文件不存在：{path}")
-                    return ""
-                # return jsonify({"code": 1, "msg": None})
-                return ""
-            with open(path, 'r', encoding='utf-8') as f:
-                data = json.loads(f.read())
-                if data['is_save'] == False:
-                    if data['is_ok']:
-                        endpoint = f"/vid/video/saveTranslateContent"
-                        headers = {"Content-Type": "application/json"}
-                        body = {
-                            "id":id,
-                            "translateContent":data['text']
-                        }
-                        respone = http_request.send_request(endpoint=endpoint,body=body,headers=headers)
-                        if respone.get('code') != 0:
-                            raise Exception("识别和翻译内容保存失败")
-                        # print("======= 保存成功 ========")
-                        data['is_save'] = True
-                        with open(Path(path),'w',encoding='utf-8') as f:
-                            json.dump(data,f,ensure_ascii=False,indent=4)
-                return data['text']
+    def get_translator(task_id="", id="", no_response=False):
+        if not task_id:
+            return ""
+            # task_id = request.args.get("task_id")
+        # task_id = request.args.get("taskid")
+        import os
+        import json
+        from pathlib import Path
 
+        current_file = os.path.abspath(__file__)
+        project_root = os.path.dirname(current_file)
+        file_path = os.path.join(project_root, "apidata", task_id)
+        file_name = task_id + ".json"
+        path = Path(file_path) / file_name
+        if not path.exists():
+            if no_response:
+                # print(f"文件不存在：{path}")
+                return ""
+            # return jsonify({"code": 1, "msg": None})
+            return ""
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.loads(f.read())
+            if data["is_save"] == False:
+                if data["is_ok"]:
+                    endpoint = f"/vid/video/saveTranslateContent"
+                    headers = {"Content-Type": "application/json"}
+                    body = {"id": id, "translateContent": data["text"]}
+                    response = http_request.send_request(
+                        endpoint=endpoint, body=body, headers=headers
+                    )
+                    if response.get("code") != 0:
+                        raise Exception("识别和翻译内容保存失败")
+                    # print("======= 保存成功 ========")
+                    data["is_save"] = True
+                    with open(Path(path), "w", encoding="utf-8") as f:
+                        json.dump(data, f, ensure_ascii=False, indent=4)
+            return data["text"]
 
     # 获取文件上传地址
     @app.route("/get_upload_url", methods=["POST"])
@@ -757,7 +785,7 @@ if __name__ == "__main__":
         except Exception as e:
             print(e)
             return None
-    
+
     def _cobine_subtitle_translation_content(origin_msg, stc):
         return f"""
 === 执行状态信息 ===
@@ -767,10 +795,10 @@ if __name__ == "__main__":
 ===========
         """
 
-    def _get_task_data(task_id,id):
-        stc = get_translator(task_id = task_id,id = id, no_response=True)
+    def _get_task_data(task_id, id):
+        stc = get_translator(task_id=task_id, id=id, no_response=True)
         # print(f"stc:{str(stc)}")
-                
+
         file = PROCESS_INFO + f"/{task_id}.json"
         if not Path(file).is_file():
             if task_id in config.uuid_logs_queue:
@@ -781,7 +809,9 @@ if __name__ == "__main__":
         try:
             data = json.loads(Path(file).read_text(encoding="utf-8"))
         except Exception as e:
-            msg = _cobine_subtitle_translation_content(Path(file).read_text(encoding="utf-8"), stc)
+            msg = _cobine_subtitle_translation_content(
+                Path(file).read_text(encoding="utf-8"), stc
+            )
             return {"code": -1, "msg": msg}
 
         if data["type"] == "error":
@@ -812,16 +842,18 @@ if __name__ == "__main__":
         retry_interval = 3  # 每次轮询间隔 1 秒
 
         for attempt in range(retry_count):
-            respone = http_request.send_request(endpoint=endpoint, headers=headers)
-            if respone["code"] == 0 and respone["msg"]:
+            response = http_request.send_request(endpoint=endpoint, headers=headers)
+            if response["code"] == 0 and response["msg"]:
                 try:
-                    signed_url = bucket.sign_url("GET", respone["msg"], 3600)
+                    signed_url = bucket.sign_url("GET", response["msg"], 3600)
                     break  # 成功生成签名 URL，退出轮询
                 except oss2.exceptions.ClientError as e:
                     print(f"OSS ClientError: {e}")
                     signed_url = None
             else:
-                print(f"轮询尝试 {attempt + 1}/{retry_count} 失败，响应码: {respone['code']}")
+                print(
+                    f"轮询尝试 {attempt + 1}/{retry_count} 失败，响应码: {response['code']}"
+                )
                 time.sleep(retry_interval)
 
         if signed_url is None:
@@ -833,7 +865,7 @@ if __name__ == "__main__":
                 "absolute_path": absolute_path,
                 "url": url,
                 "signed_url": signed_url,
-                "file_ext":".mp4",
+                "file_ext": ".mp4",
             },
         }
         return res
@@ -947,7 +979,7 @@ if __name__ == "__main__":
                     if data["type"] not in END_STATUS_LIST + LOGS_STATUS_LIST:
                         continue
                     with open(
-                            PROCESS_INFO + f"/{uuid}.json", "w", encoding="utf-8"
+                        PROCESS_INFO + f"/{uuid}.json", "w", encoding="utf-8"
                     ) as f:
                         f.write(json.dumps(data))
                     if data["type"] in END_STATUS_LIST:
@@ -956,7 +988,6 @@ if __name__ == "__main__":
                 except Exception:
                     pass
             time.sleep(0.1)
-
 
     # Windows 上需要这个来避免子进程的递归执行问题
     multiprocessing.freeze_support()
