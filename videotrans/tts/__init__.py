@@ -17,6 +17,7 @@ GOOGLE_TTS = 10
 TTS_API = 11
 VOLCENGINE_TTS = 12
 F5_TTS = 13
+SPARK_TTS = 14
 
 TTS_NAME_LIST = [
     "Edge-TTS(免费)" if config.defaulelang=='zh' else 'Edge-TTS',
@@ -33,6 +34,7 @@ TTS_NAME_LIST = [
     "自定义TTSAPI" if config.defaulelang == 'zh' else 'Customize API',
     "字节火山语音合成" if config.defaulelang == 'zh' else 'VolcEngine TTS',
     "F5-TTS(本地)" if config.defaulelang=='zh' else 'F5-TTS'
+    "SPARK-TTS(本地)" if config.defaulelang=='zh' else 'SPARK-TTS'
 ]
 
 
@@ -43,6 +45,8 @@ def is_allow_lang(langcode: str = None, tts_type: int = None):
         return 'GPT-SoVITS 仅支持中日英韩配音' if config.defaulelang == 'zh' else 'GPT-SoVITS only supports Chinese, English, Japanese,ko'
     if tts_type == COSYVOICE_TTS and langcode[:2] not in ['zh', 'ja', 'en', 'ko']:
         return 'CosyVoice仅支持中日韩语言配音' if config.defaulelang == 'zh' else 'CosyVoice only supports Chinese, English, Japanese and Korean'
+    if tts_type == SPARK_TTS and langcode[:2] not in ['zh', 'ja', 'en', 'ko']:
+        return 'SPARK-TTS 仅支持中日韩语言配音' if config.defaulelang == 'zh' else 'SPARK-TTS only supports Chinese, English, Japanese and Korean'
 
     if tts_type == CHATTTS and langcode[:2] not in ['zh', 'en']:
         return 'ChatTTS 仅支持中英语言配音' if config.defaulelang == 'zh' else 'ChatTTS only supports Chinese, English'
@@ -136,6 +140,12 @@ def is_input_api(tts_type: int = None,return_str=False):
         from videotrans.winform import  f5tts as f5tts_win
         f5tts_win.openwin()
         return False
+    if tts_type == SPARK_TTS and (not config.params['sparktts_url'] or not config.params['sparktts_model']):
+        if return_str:
+            return "Please configure the api and key information of the VolcEngine SPARK-TTS channel first."
+        from videotrans.winform import  sparktts as sparktts_win
+        sparktts_win.openwin()
+        return False
     return True
 
 
@@ -196,3 +206,6 @@ def run(*, queue_tts=None, language=None, inst=None, uuid=None, play=False, is_t
     elif tts_type == F5_TTS:
         from videotrans.tts._f5tts import F5TTS
         F5TTS(**kwargs).run()
+    elif tts_type == SPARK_TTS:
+        from videotrans.tts._sparktts import SparkTTS
+        SparkTTS(**kwargs).run()
