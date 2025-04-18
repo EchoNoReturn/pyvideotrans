@@ -778,6 +778,69 @@ if __name__ == "__main__":
         except Exception as e:
             return jsonify({"code": 1, "msg": str(e)})
 
+    # 文件上传初始化
+    @app.route("/oss-init", methods=["GET"])
+    def oss_init():
+            endpoint = f"/oss/file/init"
+            headers = {"Content-Type": "application/json"}
+            response = http_request.send_request(
+                endpoint=endpoint,headers=headers
+            )
+            return response
+
+    # 获取文件上传地址
+    @app.route("/oss-url", methods=["POST"])
+    def oss_url():
+            endpoint = f"/oss/file/url"
+            headers = {"Content-Type": "application/json"}
+            uploadId = request.json.get("uploadId")
+            objectName = request.json.get("objectName")
+            partNumber = request.json.get("partNumber")
+            body = {
+                "uploadId":uploadId,
+                "objectName":objectName,
+                "partnumber":partNumber
+            }
+            response = http_request.send_request(
+                endpoint=endpoint,body=body,headers=headers
+            )
+            return response
+
+    # 取消文件上传
+    @app.route("/oss-cancel", methods=["POST"])
+    def oss_cancel():
+            endpoint = f"/oss/file/cancel"
+            headers = {"Content-Type": "application/json"}
+            uploadId = request.json.get("uploadId")
+            objectName = request.json.get("objectName")
+            body = {
+                "uploadId":uploadId,
+                "objectName":objectName,
+            }
+            response = http_request.send_request(
+                endpoint=endpoint,body=body,headers=headers
+            )
+            return response
+
+    # 合并文件
+    @app.route("/oss-merge", methods=["POST"])
+    def oss_merge():
+            endpoint = f"/oss/file/merge"
+            headers = {"Content-Type": "application/json"}
+            uploadId = request.json.get("uploadId")
+            objectName = request.json.get("objectName")
+            partETags = request.json.get("partETags")
+            body = {
+                "uploadId":uploadId,
+                "objectName":objectName,
+                "partETags":partETags
+            }
+            response = http_request.send_request(
+                endpoint=endpoint,body=body,headers=headers
+            )
+            return response
+    
+
     # 下载文件
     def _download_file(object_key, path):
         try:
