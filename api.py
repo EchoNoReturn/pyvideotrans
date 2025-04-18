@@ -492,6 +492,8 @@ if __name__ == "__main__":
             "only_video": bool(data.get("only_video", False)),
             # 存储桶
             "bucket": bucket,
+            # 其他
+            "isCheck": bool(data.get("only_video", True)),
         }
 
         # 修改翻译渠道
@@ -586,34 +588,35 @@ if __name__ == "__main__":
             return jsonify({"code": 1, "msg": "视频信息记录出错"})
 
         # 判断是否存在相同翻译视频
-        endpoint = "/vid/video/isExist"
-        headers = {
-            "Content-Type": "application/json",
-        }
-        video_data = {
-            "id": cfg["record_id"],
-            "tarLanguage": cfg["target_language"],
-            "hashCode": cfg["hashCode"],
-        }
-        response = http_request.send_request(
-            endpoint=endpoint, body=video_data, headers=headers
-        )
-        if response["code"] == 0:
-            # 重定向
-            endpoint = "/vid/video/copyModify"
+        if cfg["isCheck"]:
+            endpoint = "/vid/video/isExist"
             headers = {
                 "Content-Type": "application/json",
             }
             video_data = {
                 "id": cfg["record_id"],
-                "processStatus": "VIDEO_STATUS_REDIRECT",
+                "tarLanguage": cfg["target_language"],
+                "hashCode": cfg["hashCode"],
             }
             response = http_request.send_request(
                 endpoint=endpoint, body=video_data, headers=headers
             )
-            signed_url = bucket.sign_url("GET", response["msg"], 3600)
-            if signed_url != None:
-                return jsonify({"code": 403, "signed_url": signed_url})
+            if response["code"] == 0:
+                # 重定向
+                endpoint = "/vid/video/copyModify"
+                headers = {
+                    "Content-Type": "application/json",
+                }
+                video_data = {
+                    "id": cfg["record_id"],
+                    "processStatus": "VIDEO_STATUS_REDIRECT",
+                }
+                response = http_request.send_request(
+                    endpoint=endpoint, body=video_data, headers=headers
+                )
+                signed_url = bucket.sign_url("GET", response["msg"], 3600)
+                if signed_url != None:
+                    return jsonify({"code": 403, "signed_url": signed_url})
 
         config.current_status = "ing"
         trk = TransCreate(cfg)
