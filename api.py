@@ -802,7 +802,7 @@ if __name__ == "__main__":
             body = {
                 "uploadId":uploadId,
                 "objectName":objectName,
-                "partnumber":partNumber
+                "partNumber":partNumber
             }
             response = http_request.send_request(
                 endpoint=endpoint,body=body,headers=headers
