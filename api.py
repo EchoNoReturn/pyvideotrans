@@ -493,7 +493,7 @@ if __name__ == "__main__":
             # 存储桶
             "bucket": bucket,
             # 其他
-            "isCheck": bool(data.get("only_video", True)),
+            "isCheck": bool(data.get("isCheck", True)),
         }
 
         # 修改翻译渠道
@@ -577,6 +577,7 @@ if __name__ == "__main__":
             "taskId": obj["uuid"],
             "memberId": cfg["memberId"],
             "recModel": cfg["recogn_type"],
+            "recModelName": cfg["model_name"],
             "traModel": cfg["translate_type"],
             "dubModel": cfg["tts_type"],
         }
@@ -611,10 +612,12 @@ if __name__ == "__main__":
                     "id": cfg["record_id"],
                     "processStatus": "VIDEO_STATUS_REDIRECT",
                 }
-                response = http_request.send_request(
+                http_request.send_request(
                     endpoint=endpoint, body=video_data, headers=headers
                 )
+
                 signed_url = bucket.sign_url("GET", response["msg"], 3600)
+                print(f"signed_url:{signed_url}")
                 if signed_url != None:
                     return jsonify({"code": 403, "signed_url": signed_url})
 
