@@ -799,10 +799,12 @@ if __name__ == "__main__":
             uploadId = request.json.get("uploadId")
             objectName = request.json.get("objectName")
             partNumber = request.json.get("partNumber")
+            contentType = request.json.get("contentType")
             body = {
                 "uploadId":uploadId,
                 "objectName":objectName,
-                "partNumber":partNumber
+                "partNumber":partNumber,
+                "contentType":contentType
             }
             response = http_request.send_request(
                 endpoint=endpoint,body=body,headers=headers
