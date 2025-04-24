@@ -1,21 +1,47 @@
+import time
+from tracemalloc import start
 from flask import Flask, request, jsonify
 import os
 import torch
+import logging
 import soundfile as sf
 from datetime import datetime
-import tempfile
 from werkzeug.utils import secure_filename
 from pathlib import Path
 from cli.SparkTTS import SparkTTS
 
 app = Flask(__name__)
 
+log_dir = os.path.join(os.path.dirname(__file__), 'logs')
+os.makedirs(log_dir, exist_ok=True)
+log_file = os.path.join(log_dir, 'api.log')
+
+from logging.handlers import RotatingFileHandler
+file_handler = RotatingFileHandler(
+    log_file, 
+    maxBytes=1024 * 1024 * 10,
+    backupCount=10
+)
+file_handler.setFormatter(logging.Formatter(
+    '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+))
+app.logger.addHandler(file_handler)
+app.logger.setLevel(logging.INFO)
+
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(logging.Formatter(
+    '[%(asctime)s] %(levelname)s %(message)s'
+))
+app.logger.addHandler(console_handler)
+
+
 def initialize_model(model_dir="pretrained_models/Spark-TTS-0.5B", device=0):
-    """Load the model once at the beginning."""
     if torch.cuda.is_available():
+        app.logger.info("Using CUDA")
         device = torch.device(f"cuda:{device}")
     else:
         device = torch.device("cpu")
+        app.logger.info("GPU acceleration not available, using CPU")
     model = SparkTTS(model_dir, device)
     return model
 
@@ -23,62 +49,44 @@ model = initialize_model()
 
 @app.route('/tts', methods=['POST'])
 def tts():
+    start_time = time.time()
     try:
-        # 检查是否有文件上传
-        prompt_speech_path = None
-        if 'audio_file' in request.files:
-            audio_file = request.files['audio_file']
-            if audio_file.filename != '':
-                # 保存上传的音频文件到临时目录
-                filename = secure_filename(audio_file.filename)
-                temp_dir = tempfile.mkdtemp()
-                temp_path = os.path.join(temp_dir, filename)
-                audio_file.save(temp_path)
-                prompt_speech_path = Path(temp_path)
-                app.logger.info(f"Received audio file: {filename}, saved to {temp_path}")
-        
-        # 获取表单或JSON数据
         if request.is_json:
             data = request.json
         else:
             data = request.form
-            
+        prompt_speech_path = None
+        audio_path = data.get('audio_path')
+        if audio_path and os.path.exists(audio_path):
+            prompt_speech_path = Path(audio_path)
         text = data.get('text')
         prompt_text = data.get('prompt_text')
         save_dir = data.get('save_path')
-
-        app.logger.info(f"Received TTS request with text: {text}")
-
+        
         os.makedirs(save_dir, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         save_path = os.path.join(save_dir, f"{timestamp}.wav")
 
         with torch.no_grad():
-            app.logger.info("Starting model inference...")
+            
             wav = model.inference(
                 text,
                 prompt_speech_path,
                 prompt_text,
-                gender,
-                pitch,
-                speed,
             )
-            sf.write(save_path, wav, samplerate=16000)
             
-        # 如果使用了临时目录，清理它
-        if prompt_speech_path and os.path.dirname(prompt_speech_path) == temp_dir:
-            try:
-                os.remove(prompt_speech_path)
-                os.rmdir(temp_dir)
-                app.logger.info(f"Cleaned up temporary directory: {temp_dir}")
-            except Exception as e:
-                app.logger.warning(f"Failed to clean up temporary files: {e}")
+            sf.write(save_path, wav, samplerate=16000)
 
-        app.logger.info(f"Audio saved at: {save_path}")
-        return jsonify({"audio_path": save_path})
+
+        total_time = round(time.time() - start_time, 3)
+        app.logger.info(f"Request total processing time: {total_time}s")
+        return jsonify({
+            "status": "success",
+            "total_time": total_time,
+            "audio_path": save_path
+            }), 200
     except Exception as e:
-        # Log the exception
-        app.logger.error(f"Error during TTS processing: {e}")
+        app.logger.error(f"Error during TTS processing: {str(e)}", exc_info=True)
         return jsonify({"error": "Internal Server Error"}), 500
 
 if __name__ == '__main__':
