@@ -1,93 +1,106 @@
+import copy
+import json
+import os,re
 import time
-from tracemalloc import start
-from flask import Flask, request, jsonify
-import os
-import torch
-import logging
-import soundfile as sf
-from datetime import datetime
-from werkzeug.utils import secure_filename
 from pathlib import Path
-from cli.SparkTTS import SparkTTS
+from typing import Union, Dict, List
 
-app = Flask(__name__)
+import requests
+from pydub import AudioSegment
 
-log_dir = os.path.join(os.path.dirname(__file__), 'logs')
-os.makedirs(log_dir, exist_ok=True)
-log_file = os.path.join(log_dir, 'api.log')
-
-from logging.handlers import RotatingFileHandler
-file_handler = RotatingFileHandler(
-    log_file, 
-    maxBytes=1024 * 1024 * 10,
-    backupCount=10
-)
-file_handler.setFormatter(logging.Formatter(
-    '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
-))
-app.logger.addHandler(file_handler)
-app.logger.setLevel(logging.INFO)
-
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(logging.Formatter(
-    '[%(asctime)s] %(levelname)s %(message)s'
-))
-app.logger.addHandler(console_handler)
+from videotrans.configure import config
+from videotrans.tts._base import BaseTTS
+from videotrans.util import tools
 
 
-def initialize_model(model_dir="pretrained_models/Spark-TTS-0.5B", device=0):
-    if torch.cuda.is_available():
-        app.logger.info("Using CUDA")
-        device = torch.device(f"cuda:{device}")
-    else:
-        device = torch.device("cpu")
-        app.logger.info("GPU acceleration not available, using CPU")
-    model = SparkTTS(model_dir, device)
-    return model
+# 线程池并发  返回wav数据转为mp3
+class SparkTTS(BaseTTS):
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.copydata = copy.deepcopy(self.queue_tts)
+        api_url = config.params['f5tts_url'].strip().rstrip('/').lower()
+        self.api_url = 'http://' + api_url.replace('http://', '')
+        if not self.api_url.endswith('/api'):
+            self.api_url+='/api'
+        self.proxies={"http": "", "https": ""}
+    
 
-model = initialize_model()
-
-@app.route('/tts', methods=['POST'])
-def tts():
-    start_time = time.time()
-    try:
-        if request.is_json:
-            data = request.json
-        else:
-            data = request.form
-        prompt_speech_path = None
-        audio_path = data.get('audio_path')
-        if audio_path and os.path.exists(audio_path):
-            prompt_speech_path = Path(audio_path)
-        text = data.get('text')
-        prompt_text = data.get('prompt_text')
-        save_dir = data.get('save_path')
-        
-        os.makedirs(save_dir, exist_ok=True)
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        save_path = os.path.join(save_dir, f"{timestamp}.wav")
-
-        with torch.no_grad():
-            
-            wav = model.inference(
-                text,
-                prompt_speech_path,
-                prompt_text,
-            )
-            
-            sf.write(save_path, wav, samplerate=16000)
+    
+    def _exec(self):
+        self._local_mul_thread()
 
 
-        total_time = round(time.time() - start_time, 3)
-        app.logger.info(f"Request total processing time: {total_time}s")
-        return jsonify({
-            "status": "success",
-            "total_time": total_time,
-            "audio_path": save_path
-            }), 200
-    except Exception as e:
-        app.logger.error(f"Error during TTS processing: {str(e)}", exc_info=True)
-        return jsonify({"error": "Internal Server Error"}), 500
+    def _item_task(self, data_item: Union[Dict, List, None]):
+        if self._exit():
+            return
+        if not data_item:
+            return
+        speed=1.0
+        try:
+            speed=1+float(self.rate.replace('%',''))/100
+        except:
+            pass
+        try:
+            text = data_item['text'].strip()
+            role = data_item['role']
+            if not text:
+                return
+            data = {"model":config.params['f5tts_model'],'speed':speed}
+            data['gen_text']=text
+            if role=='clone':
+                if not Path(data_item['ref_wav']).exists():
+                    self.error = f'不存在参考音频，无法使用clone功能' if config.defaulelang=='zh' else 'No reference audio exists and cannot use clone function'
+                    return
+                audio_chunk=AudioSegment.from_wav(data_item['ref_wav'])
+                data['ref_text']=data_item.get('ref_text').strip()
 
-if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=5000)
+
+                with open(data_item['ref_wav'],'rb') as f:
+                    chunk=f.read()
+                files={"audio":chunk}
+                if not data['ref_text']:
+                    Path(data_item['filename']).unlink(missing_ok=True)
+                    return
+            else:
+                roledict = tools.get_f5tts_role()
+                if role in roledict:
+                    data['ref_text']=roledict[role]['ref_text']
+                    with open(config.ROOT_DIR+f"/f5-tts/{role}",'rb') as f:
+                        chunk=f.read()
+                    files={"audio":chunk}
+                else:
+                    self.error = f'{role} 角色不存在'
+                    return
+            config.logger.info(f'f5TTS-post:{data=},{self.proxies=}')
+            response = requests.post(f"{self.api_url}",files=files,data=data, proxies=self.proxies, timeout=3600)
+            if response.status_code != 200:
+                self.error = f'{response.json()["error"]}, status_code={response.status_code} {response.reason} '
+                Path(data_item['filename']).unlink(missing_ok=True)
+                return
+
+            # 如果是WAV音频流，获取原始音频数据
+            with open(data_item['filename'] + ".wav", 'wb') as f:
+                f.write(response.content)
+            time.sleep(1)
+            if not os.path.exists(data_item['filename'] + ".wav"):
+                self.error = f'F5-TTS合成声音失败-2:{text=}'
+                return
+            tools.wav2mp3(data_item['filename'] + ".wav", data_item['filename'])
+            Path(data_item['filename'] + ".wav").unlink(missing_ok=True)
+
+            if self.inst and self.inst.precent < 80:
+                self.inst.precent += 0.1
+            self.error = ''
+            self.has_done += 1
+        except (requests.ConnectionError, requests.Timeout) as e:
+            self.error="连接失败，请检查是否启动了api服务" if config.defaulelang=='zh' else  'Connection failed, please check if the api service is started'
+        except Exception as e:
+            self.error = str(e)
+            config.logger.exception(e, exc_info=True)
+        finally:
+            if self.error:
+                self._signal(text=self.error)
+            else:
+                self._signal(text=f'{config.transobj["kaishipeiyin"]} {self.has_done}/{self.len}')
+        return
