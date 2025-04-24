@@ -870,12 +870,12 @@ if __name__ == "__main__":
 
     def _cobine_subtitle_translation_content(origin_msg, stc):
         return f"""
-=== 执行状态信息 ===
-{origin_msg}
-=== 识别和翻译内容 ===
-{stc}
-===========
-        """
+            === 执行状态信息 ===
+            {origin_msg}
+            === 识别和翻译内容 ===
+            {stc}
+            ===========
+            """
 
     def _get_task_data(task_id, id):
         stc = get_translator(task_id=task_id, id=id, no_response=True)
@@ -920,8 +920,8 @@ if __name__ == "__main__":
         endpoint = f"/vid/video/targetVideo?id={id}"
         headers = {"Content-Type": "application/json"}
         signed_url = None
-        retry_count = 6  # 最多轮询 10 次
-        retry_interval = 3  # 每次轮询间隔 1 秒
+        retry_count = 12
+        retry_interval = 10
 
         for attempt in range(retry_count):
             response = http_request.send_request(endpoint=endpoint, headers=headers)

@@ -80,10 +80,15 @@ class Qwen(BaseTrans):
             data['text'] = ""
         new_language = self.map_language(self.target_code)  # 目标语言
         old_language = self.map_language(self.source_code)  # 源语言
+        total = 0
         for item in self.text_list:
             if item is not None and 'text' in item:
                 text = item['text']
                 content = self.openAI(text, old_language, new_language)
+                total+=1
+                if(total% 5==0):
+                    import time
+                    time.sleep(1)
                 data['text'] = data['text'] + text+ "\n" + content + "\n"
                 with open(Path(path),'w',encoding='utf-8') as f:
                     json.dump(data,f,ensure_ascii=False,indent=4)

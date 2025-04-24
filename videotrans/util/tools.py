@@ -1631,7 +1631,7 @@ def get_video_codec():
 
 
 # 设置ass字体格式
-def set_ass_font(srtfile=None):
+def set_ass_font(srtfile=None,_fontsize=None):
     if not os.path.exists(srtfile) or os.path.getsize(srtfile) == 0:
         return os.path.basename(srtfile)
     runffmpeg(['-y', '-i', srtfile, f'{srtfile}.ass'])
@@ -1644,7 +1644,7 @@ def set_ass_font(srtfile=None):
     for i, it in enumerate(ass_str):
         if it.find('Style: ') == 0:
             ass_str[i] = 'Style: Default,{fontname},{fontsize},{fontcolor},&HFFFFFF,{fontbordercolor},&H0,0,0,0,0,100,100,0,0,1,1,0,2,10,10,{subtitle_bottom},1'.format(
-                fontname=config.settings['fontname'], fontsize=config.settings['fontsize'],
+                fontname=config.settings['fontname'], fontsize = _fontsize if _fontsize is not None else config.settings['fontsize'],
                 fontcolor=config.settings['fontcolor'], fontbordercolor=config.settings['fontbordercolor'],
                 subtitle_bottom=config.settings['subtitle_bottom'])
         elif it.find('Dialogue: ')==0:

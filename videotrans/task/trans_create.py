@@ -225,6 +225,7 @@ class TransCreate(BaseTask):
 
     # （1）开始预处理
     def prepare(self) -> None:
+        print("预处理================================================>")
         self._start_timer("预处理阶段")
         if self._exit():
             return
@@ -599,9 +600,10 @@ class TransCreate(BaseTask):
         object_key = str(uuid.uuid4())
         oss_headers = {"Content-Type": "video/mp4", "x-oss-meta-file-ext": ".mp4"}
         with open(self.cfg["targetdir_mp4"], "rb") as file:
-            bucket.put_object( object_key, file, headers=oss_headers)
+                result = bucket.put_object(object_key, file, headers=oss_headers)
+                result.resp.read()
+    
         result_video_data = self._get_video_data(self.cfg["targetdir_mp4"]); 
-            
         # 入库
         endpoint = "/vid/video/copyModify"
         headers = {
@@ -615,7 +617,6 @@ class TransCreate(BaseTask):
             if "duration" in stage
         )
         execution_logs = []
-        # execution_logs.append(f"原视频信息：{str(self.cfg["origin_video_data"])}")
         sou_data = self.cfg["origin_video_data"]
         for stage, times in self.execution_times.items():
             if "duration" in times:
@@ -1201,6 +1202,21 @@ class TransCreate(BaseTask):
                 else "No valid subtitle file exists"
             )
 
+        #根据视频宽高适配字幕
+        width = self.cfg["origin_video_data"]["width"]
+        height = self.cfg["origin_video_data"]["height"]
+        # 动态计算字体大小（基于视频高度）
+        fontsize = max(12, int(height * 0.04))
+        # 动态计算行字符数
+        base_maxlen = int(width / (fontsize * 0.6))
+        dynamic_cjk_len = int(base_maxlen * 0.8)
+        dynamic_other_len = base_maxlen
+        print(f"width:{width}")
+        print(f"height:{height}")
+        print(f"fontsize:{fontsize}")
+        print(f"dynamic_cjk_len:{dynamic_cjk_len}")
+        print(f"dynamic_other_len:{dynamic_other_len}")
+
         # 如果原始语言和目标语言相同，或不存原始语言字幕，则强制单字幕
         if (self.cfg["source_language_code"] == self.cfg["target_language_code"]) or (
                 not self.cfg["source_sub"] or not Path(self.cfg["source_sub"]).exists()
@@ -1212,11 +1228,12 @@ class TransCreate(BaseTask):
         # 最终处理后需要嵌入视频的字幕
         process_end_subtitle = self.cfg["cache_folder"] + f"/end.srt"
         # 硬字幕时单行字符数
-        maxlen = int(
-            config.settings["cjk_len"]
-            if self.cfg["target_language_code"][:2] in ["zh", "ja", "jp", "ko"]
-            else config.settings["other_len"]
-        )
+        # maxlen = int(
+        #     config.settings["cjk_len"]
+        #     if self.cfg["target_language_code"][:2] in ["zh", "ja", "jp", "ko"]
+        #     else config.settings["other_len"]
+        # )
+        maxlen = dynamic_cjk_len if self.cfg["target_language_code"][:2] in ["zh", "ja", "jp", "ko"] else dynamic_other_len
         target_sub_list = tools.get_subtitle_from_srt(self.cfg["target_sub"])
 
         if (
@@ -1228,11 +1245,12 @@ class TransCreate(BaseTask):
 
         # 双硬 双软字幕组装
         if self.cfg["subtitle_type"] in [3, 4]:
-            maxlen_source = int(
-                config.settings["cjk_len"]
-                if self.cfg["source_language_code"][:2] in ["zh", "ja", "jp", "ko"]
-                else config.settings["other_len"]
-            )
+            # maxlen_source = int(
+            #     config.settings["cjk_len"]
+            #     if self.cfg["source_language_code"][:2] in ["zh", "ja", "jp", "ko"]
+            #     else config.settings["other_len"]
+            # )
+            maxlen_source = dynamic_cjk_len if self.cfg["target_language_code"][:2] in ["zh", "ja", "jp", "ko"] else dynamic_other_len
             source_sub_list = tools.get_subtitle_from_srt(self.cfg["source_sub"])
             source_length = len(source_sub_list)
 
@@ -1286,7 +1304,7 @@ class TransCreate(BaseTask):
             return os.path.basename(process_end_subtitle), subtitle_langcode
 
         # 硬字幕转为ass格式 并设置样式
-        process_end_subtitle_ass = tools.set_ass_font(process_end_subtitle)
+        process_end_subtitle_ass = tools.set_ass_font(process_end_subtitle,fontsize)
         basename = os.path.basename(process_end_subtitle_ass)
         return basename, subtitle_langcode
 
