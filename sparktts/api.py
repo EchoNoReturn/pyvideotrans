@@ -1,14 +1,13 @@
 import time
-from tracemalloc import start
 from flask import Flask, request, jsonify
 import os
 import torch
 import logging
 import soundfile as sf
-from datetime import datetime
-from werkzeug.utils import secure_filename
+import io
 from pathlib import Path
 from cli.SparkTTS import SparkTTS
+from pydub import AudioSegment
 
 app = Flask(__name__)
 
@@ -64,19 +63,23 @@ def tts():
         save_dir = data.get('save_path')
         
         os.makedirs(save_dir, exist_ok=True)
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        save_path = os.path.join(save_dir, f"{timestamp}.wav")
+        timestamp = data.get("file_save_name")
+        file_suffix = data.get('file_sava_suffix', 'mp3')
+        save_path = os.path.join(save_dir, f"{timestamp}.{file_suffix}")
 
         with torch.no_grad():
-            
             wav = model.inference(
                 text,
                 prompt_speech_path,
                 prompt_text,
             )
-            
-            sf.write(save_path, wav, samplerate=16000)
 
+            temp_wav_io = io.BytesIO()
+            sf.write(temp_wav_io, wav, samplerate=16000, format='WAV')
+            temp_wav_io.seek(0)
+
+            audio_segment = AudioSegment.from_wav(temp_wav_io)
+            audio_segment.export(save_path, format=file_suffix)
 
         total_time = round(time.time() - start_time, 3)
         app.logger.info(f"Request total processing time: {total_time}s")
@@ -85,6 +88,7 @@ def tts():
             "total_time": total_time,
             "audio_path": save_path
             }), 200
+
     except Exception as e:
         app.logger.error(f"Error during TTS processing: {str(e)}", exc_info=True)
         return jsonify({"error": "Internal Server Error"}), 500
