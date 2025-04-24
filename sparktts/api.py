@@ -74,12 +74,31 @@ def tts():
                 prompt_text,
             )
 
+            supported_formats = ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'wma']
+            
+            if file_suffix.lower() not in supported_formats:
+                app.logger.warning(f"Unsupported audio format: {file_suffix}， will use MP3 format")
+                file_suffix = 'mp3'
+                save_path = os.path.join(save_dir, f"{timestamp}.{file_suffix}")
+            
             temp_wav_io = io.BytesIO()
             sf.write(temp_wav_io, wav, samplerate=16000, format='WAV')
             temp_wav_io.seek(0)
-
+            
             audio_segment = AudioSegment.from_wav(temp_wav_io)
-            audio_segment.export(save_path, format=file_suffix)
+            
+            export_params = {}
+            if file_suffix.lower() == 'mp3':
+                export_params = {'bitrate': '192k'}
+            elif file_suffix.lower() == 'ogg':
+                export_params = {'codec': 'libvorbis', 'quality': '5'}
+            elif file_suffix.lower() == 'flac':
+                export_params = {'compression': 8}
+            elif file_suffix.lower() == 'm4a':
+                export_params = {'codec': 'aac', 'bitrate': '192k'}
+            
+            audio_segment.export(save_path, format=file_suffix.lower(), **export_params)
+            app.logger.info(f"The audio has been saved in {file_stuffix} format")
 
         total_time = round(time.time() - start_time, 3)
         app.logger.info(f"Request total processing time: {total_time}s")
