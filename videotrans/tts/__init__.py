@@ -140,7 +140,7 @@ def is_input_api(tts_type: int = None,return_str=False):
         from videotrans.winform import  f5tts as f5tts_win
         f5tts_win.openwin()
         return False
-    if tts_type == SPARK_TTS and (not config.params['sparktts_url'] or not config.params['sparktts_model']):
+    if tts_type == SPARK_TTS and (not config.params['sparktts_url']):
         if return_str:
             return "Please configure the api and key information of the VolcEngine SPARK-TTS channel first."
         from videotrans.winform import  sparktts as sparktts_win
@@ -206,6 +206,6 @@ def run(*, queue_tts=None, language=None, inst=None, uuid=None, play=False, is_t
     elif tts_type == F5_TTS:
         from videotrans.tts._f5tts import F5TTS
         F5TTS(**kwargs).run()
-    elif tts_type == SPARK_TTS:
+    elif tts_type == SPARK_TTS: 
         from videotrans.tts._sparktts import SparkTTS
         SparkTTS(**kwargs).run()

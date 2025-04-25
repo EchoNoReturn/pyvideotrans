@@ -699,6 +699,7 @@ Output format:
         "fishtts_url": "",
         "fishtts_role": "",
         "f5tts_url": "",
+        "sparktts_url": "",
         "f5tts_model": "",
         "f5tts_role": "",
         "doubao_appid": "",

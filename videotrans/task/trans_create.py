@@ -28,6 +28,7 @@ from videotrans.tts import (
     EDGE_TTS,
     AZURE_TTS,
     ELEVENLABS_TTS,
+    SPARK_TTS
 )
 from videotrans.util import tools
 from ._base import BaseTask
@@ -902,7 +903,7 @@ class TransCreate(BaseTask):
                 tmp_dict["ref_text"] = self.cfg["refer_text"]
             # 如果是clone-voice类型， 需要截取对应片段
             if (
-                self.cfg["tts_type"] in [COSYVOICE_TTS, CLONE_VOICE_TTS, F5_TTS]
+                self.cfg["tts_type"] in [COSYVOICE_TTS, CLONE_VOICE_TTS, F5_TTS, SPARK_TTS]
                 and voice_role == "clone"
             ):
                 if self.cfg["is_separate"] and not tools.vail_file(self.cfg["vocal"]):
