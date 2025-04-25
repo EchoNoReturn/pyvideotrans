@@ -64,7 +64,9 @@ def tts():
         
         os.makedirs(save_dir, exist_ok=True)
         timestamp = data.get("file_save_name")
-        file_suffix = data.get('file_sava_suffix', 'mp3')
+        file_suffix = data.get('file_sava_suffix')
+        # file_suffix = "wav"
+                    
         save_path = os.path.join(save_dir, f"{timestamp}.{file_suffix}")
 
         with torch.no_grad():
@@ -77,9 +79,8 @@ def tts():
             supported_formats = ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'wma']
             
             if file_suffix.lower() not in supported_formats:
-                app.logger.warning(f"Unsupported audio format: {file_suffix}， will use MP3 format")
-                file_suffix = 'mp3'
-                save_path = os.path.join(save_dir, f"{timestamp}.{file_suffix}")
+                app.logger.warning(f"Unsupported audio format: {file_suffix}")
+                return jsonify({"error": f"Unsupported audio format: {file_suffix}"}), 400
             
             temp_wav_io = io.BytesIO()
             sf.write(temp_wav_io, wav, samplerate=16000, format='WAV')
@@ -98,7 +99,6 @@ def tts():
                 export_params = {'codec': 'aac', 'bitrate': '192k'}
             
             audio_segment.export(save_path, format=file_suffix.lower(), **export_params)
-            app.logger.info(f"The audio has been saved in {file_stuffix} format")
 
         total_time = round(time.time() - start_time, 3)
         app.logger.info(f"Request total processing time: {total_time}s")
@@ -113,4 +113,4 @@ def tts():
         return jsonify({"error": "Internal Server Error"}), 500
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=5000)
+    app.run(host='127.0.0.1', port=5000, threaded=True)
