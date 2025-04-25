@@ -41,7 +41,7 @@ class SparkTTS(BaseTTS):
                 "prompt_text": prompt_text,
                 "save_path":os.path.dirname(data_item['filename']),
                 "file_save_name":os.path.splitext(os.path.basename(data_item['filename']))[0],
-                "file_sava_suffix" : "wav",
+                "file_save_suffix" : "wav",
             }
 
             if role == "clone":

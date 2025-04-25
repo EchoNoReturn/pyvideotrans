@@ -64,7 +64,7 @@ def tts():
         
         os.makedirs(save_dir, exist_ok=True)
         timestamp = data.get("file_save_name")
-        file_suffix = data.get('file_sava_suffix')
+        file_suffix = data.get('file_save_suffix')
         # file_suffix = "wav"
                     
         save_path = os.path.join(save_dir, f"{timestamp}.{file_suffix}")
