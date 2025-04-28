@@ -558,7 +558,7 @@ Output format:
         "cuda": False,
         "line_roles": {},
         "only_video": False,
-        "is_separate": False,
+        "is_separate": True,
         "remove_noise": True,
         "target_dir": "",
         "source_language": "en",
