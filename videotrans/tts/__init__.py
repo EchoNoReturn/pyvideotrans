@@ -18,6 +18,7 @@ TTS_API = 11
 VOLCENGINE_TTS = 12
 F5_TTS = 13
 SPARK_TTS = 14
+INDEX_TTS = 15
 
 TTS_NAME_LIST = [
     "Edge-TTS(免费)" if config.defaulelang=='zh' else 'Edge-TTS',
@@ -35,6 +36,7 @@ TTS_NAME_LIST = [
     "字节火山语音合成" if config.defaulelang == 'zh' else 'VolcEngine TTS',
     "F5-TTS(本地)" if config.defaulelang=='zh' else 'F5-TTS'
     "SPARK-TTS(本地)" if config.defaulelang=='zh' else 'SPARK-TTS'
+    "INDEX-TTS(本地)" if config.defaulelang=='zh' else 'INDEX-TTS'
 ]
 
 
@@ -47,6 +49,8 @@ def is_allow_lang(langcode: str = None, tts_type: int = None):
         return 'CosyVoice仅支持中日韩语言配音' if config.defaulelang == 'zh' else 'CosyVoice only supports Chinese, English, Japanese and Korean'
     if tts_type == SPARK_TTS and langcode[:2] not in ['zh', 'ja', 'en', 'ko']:
         return 'SPARK-TTS 仅支持中日韩语言配音' if config.defaulelang == 'zh' else 'SPARK-TTS only supports Chinese, English, Japanese and Korean'
+    if tts_type == INDEX_TTS and langcode[:2] not in ['zh', 'ja', 'en', 'ko']:
+        return 'INDEX_TTS 仅支持中日韩语言配音' if config.defaulelang == 'zh' else 'INDEX-TTS only supports Chinese, English, Japanese and Korean'
 
     if tts_type == CHATTTS and langcode[:2] not in ['zh', 'en']:
         return 'ChatTTS 仅支持中英语言配音' if config.defaulelang == 'zh' else 'ChatTTS only supports Chinese, English'
@@ -146,6 +150,12 @@ def is_input_api(tts_type: int = None,return_str=False):
         from videotrans.winform import  sparktts as sparktts_win
         sparktts_win.openwin()
         return False
+    if tts_type == INDEX_TTS and (not config.params['indextts_url']):
+        if return_str:
+            return "Please configure the api and key information of the VolcEngine INDEX-TTS channel first."
+        from videotrans.winform import  indextts as indextts_win
+        indextts_win.openwin()
+        return False
     return True
 
 
@@ -209,3 +219,6 @@ def run(*, queue_tts=None, language=None, inst=None, uuid=None, play=False, is_t
     elif tts_type == SPARK_TTS: 
         from videotrans.tts._sparktts import SparkTTS
         SparkTTS(**kwargs).run()
+    elif tts_type == INDEX_TTS: 
+        from videotrans.tts._indextts import IndexTTS
+        IndexTTS(**kwargs).run()
