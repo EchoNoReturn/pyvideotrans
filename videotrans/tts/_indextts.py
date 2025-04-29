@@ -35,7 +35,7 @@ class IndexTTS(BaseTTS):
             api_url = self.api_url
             data = {
                 "text": text,
-                "infer_model":1 if len(text) < 10 else 2,
+                "infer_model":1,
                 "save_file_path":os.path.dirname(data_item['filename']),
                 "save_file_name":os.path.splitext(os.path.basename(data_item['filename']))[0],
             }
@@ -47,10 +47,9 @@ class IndexTTS(BaseTTS):
             elif role == "clone-single":
                 data["prompt"] = data_item["ref_audio"]
             api_url += "/tts"
-
             response = requests.post(
                 f"{api_url}",
-                data=data,
+                json=data,
                 proxies={"http": "", "https": ""},
                 timeout=3600,
             )
