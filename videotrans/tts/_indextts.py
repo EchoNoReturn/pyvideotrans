@@ -62,7 +62,7 @@ class IndexTTS(BaseTTS):
                 self.error = f"IndexTTS 合成声音失败-2:{text=}"
                 return
             tools.wav2mp3(data['save_file_path']+"/"+data["save_file_name"]+".wav", data_item["filename"])
-            time.sleep(1)
+            # time.sleep(1)
             if self.inst and self.inst.precent < 80:
                 self.inst.precent += 0.1
             self.error = ""

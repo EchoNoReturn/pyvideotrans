@@ -603,21 +603,8 @@ if __name__ == "__main__":
                 endpoint=endpoint, body=video_data, headers=headers
             )
             if response["code"] == 0:
-                # 重定向
-                endpoint = "/vid/video/copyModify"
-                headers = {
-                    "Content-Type": "application/json",
-                }
-                video_data = {
-                    "id": cfg["record_id"],
-                    "processStatus": "VIDEO_STATUS_REDIRECT",
-                }
-                http_request.send_request(
-                    endpoint=endpoint, body=video_data, headers=headers
-                )
-
+                # 响应
                 signed_url = bucket.sign_url("GET", response["msg"], 3600)
-                print(f"signed_url:{signed_url}")
                 if signed_url != None:
                     return jsonify({"code": 403, "signed_url": signed_url})
 
@@ -863,11 +850,11 @@ if __name__ == "__main__":
 
     def _cobine_subtitle_translation_content(origin_msg, stc):
         return f"""
-            === 执行状态信息 ===
-            {origin_msg}
-            === 识别和翻译内容 ===
-            {stc}
-            ===========
+=== 执行状态信息 ===
+{origin_msg}
+=== 识别和翻译内容 ===
+{stc}
+===========
             """
 
     def _get_task_data(task_id, id):
