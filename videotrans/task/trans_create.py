@@ -9,6 +9,8 @@ import threading
 import time
 import uuid
 
+
+from fileHash import calculate_file_hash
 from pathlib import Path
 from typing import Dict
 from pydub import AudioSegment
@@ -601,6 +603,9 @@ class TransCreate(BaseTask):
         # 结束任务计时
         self._end_timer("task_done")
 
+        # 计算目标文件的hash值
+        hash_code = calculate_file_hash(self.cfg["targetdir_mp4"])
+
         # 上传处理完成的视频至oss
         bucket = self.cfg["bucket"]
         object_key = str(uuid.uuid4())
@@ -655,6 +660,7 @@ class TransCreate(BaseTask):
             "codec": sou_data["codec"],
             "width": sou_data["width"],
             "height": sou_data["height"],
+            "tarHashCode": hash_code
         }
 
         # 发送请求
