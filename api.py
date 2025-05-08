@@ -608,6 +608,29 @@ if __name__ == "__main__":
                 if signed_url != None:
                     return jsonify({"code": 403, "signed_url": signed_url})
 
+        
+
+      
+        response = http_request.send_request(
+            endpoint="/vid/video/getSouByTar", 
+            body={
+                "hashCode":cfg["hashCode"],
+                "tarLanguage":cfg["target_language"],
+                "souLanguage":cfg["source_language"]
+            }, 
+            headers={
+                "Content-Type": "application/json",
+            }
+        )
+        if response["code"] == 0:
+                print("响应==============================>")
+                print(response)
+                # 响应
+                signed_url = bucket.sign_url("GET", response["data"], 3600)
+                if signed_url != None:
+                    return jsonify({"code": 403, "signed_url": signed_url})
+           
+
         config.current_status = "ing"
         trk = TransCreate(cfg)
         config.prepare_queue.append(trk)
