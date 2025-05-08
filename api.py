@@ -32,10 +32,10 @@ if __name__ == "__main__":
 
     # 设置根目录和默认主机、端口
     ROOT_DIR = config.ROOT_DIR
-    # HOST = "127.0.0.1"
-    # PORT = 9011
-    HOST = "0.0.0.0"
-    PORT = 8086
+    HOST = "127.0.0.1"
+    PORT = 9011
+    # HOST = "0.0.0.0"
+    # PORT = 8086
 
     # 读取 host.txt 设置主机和端口
     host_file = Path(ROOT_DIR + "/host.txt")
@@ -464,11 +464,11 @@ if __name__ == "__main__":
             "oss_key": data.get("object_key", None),
             "is_separate": bool(data.get("is_separate", False)),
             "back_audio": data.get("back_audio", ""),
-            "hashCode": data.get("hashCode"),
+            "hashCode": data.get("hashCode"),  # 文件哈希值
             # 识别
             "recogn_type": 0,
             "split_type": data.get("split_type", "all"),
-            "model_name": "large-v3-turbo",  # options: tiny/medium/large-2/large-v3/large-v3-turbo
+            "model_name": "tiny",  # options: tiny/medium/large-2/large-v3/large-v3-turbo
             "cuda": bool(data.get("is_cuda", False)),
             "subtitles": data.get("subtitles", ""),
             # 翻译
@@ -850,12 +850,12 @@ if __name__ == "__main__":
 
     def _cobine_subtitle_translation_content(origin_msg, stc):
         return f"""
-=== 执行状态信息 ===
-{origin_msg}
-=== 识别和翻译内容 ===
-{stc}
-===========
-            """
+                === 执行状态信息 ===
+                {origin_msg}
+                === 识别和翻译内容 ===
+                {stc}
+                ===========
+                """
 
     def _get_task_data(task_id, id):
         stc = get_translator(task_id=task_id, id=id, no_response=True)
