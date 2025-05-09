@@ -125,7 +125,7 @@ class CosyVoice(BaseTTS):
             # 如果是WAV音频流，获取原始音频数据
             with open(data_item["filename"] + ".wav", "wb") as f:
                 f.write(response.content)
-            time.sleep(1)
+            # time.sleep(1)
             if not os.path.exists(data_item["filename"] + ".wav"):
                 self.error = f"CosyVoice 合成声音失败-2:{text=}"
                 return
