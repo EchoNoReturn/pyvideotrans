@@ -32,10 +32,10 @@ if __name__ == "__main__":
 
     # 设置根目录和默认主机、端口
     ROOT_DIR = config.ROOT_DIR
-    HOST = "127.0.0.1"
-    PORT = 9011
-    # HOST = "0.0.0.0"
-    # PORT = 8086
+    # HOST = "127.0.0.1"
+    # PORT = 9011
+    HOST = "0.0.0.0"
+    PORT = 8086
 
     # 读取 host.txt 设置主机和端口
     host_file = Path(ROOT_DIR + "/host.txt")
@@ -468,7 +468,7 @@ if __name__ == "__main__":
             # 识别
             "recogn_type": 0,
             "split_type": data.get("split_type", "all"),
-            "model_name": "tiny",  # options: tiny/medium/large-2/large-v3/large-v3-turbo
+            "model_name": "large-v3-turbo",  # options: tiny/medium/large-2/large-v3/large-v3-turbo
             "cuda": bool(data.get("is_cuda", False)),
             "subtitles": data.get("subtitles", ""),
             # 翻译

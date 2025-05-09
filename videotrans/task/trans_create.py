@@ -1226,7 +1226,7 @@ class TransCreate(BaseTask):
         # 动态计算行字符数
         safe_width = width * 0.2
         dynamic_cjk_len = max(12, min(int(safe_width / fontsize), 24))
-        dynamic_other_len = max(24, min(int(safe_width / (fontsize * 0.6)), 48))
+        dynamic_other_len = max(24, min(int(safe_width / (fontsize * 0.2)), 60))
 
         print(f"width:{width}")
         print(f"height:{height}")
@@ -1266,39 +1266,48 @@ class TransCreate(BaseTask):
 
         # 双硬 双软字幕组装
         if self.cfg["subtitle_type"] in [3, 4]:
-            # maxlen_source = int(
-            #     config.settings["cjk_len"]
-            #     if self.cfg["source_language_code"][:2] in ["zh", "ja", "jp", "ko"]
-            #     else config.settings["other_len"]
-            # )
-            maxlen_source = (
-                dynamic_cjk_len
-                if self.cfg["target_language_code"][:2] in ["zh", "ja", "jp", "ko"]
-                else dynamic_other_len
-            )
             source_sub_list = tools.get_subtitle_from_srt(self.cfg["source_sub"])
             source_length = len(source_sub_list)
-
+            
             srt_string = ""
             for i, it in enumerate(target_sub_list):
-                # 硬字幕换行，软字幕无需处理
-                tmp = (
-                    textwrap.fill(it["text"].strip(), maxlen, replace_whitespace=False)
+                # 动态计算每行字符数（区分语言）
+                target_maxlen = (
+                    dynamic_cjk_len 
+                    if self.cfg["target_language_code"][:2] in ["zh", "ja", "jp", "ko"]
+                    else dynamic_other_len
+                )
+                source_maxlen = (
+                    dynamic_cjk_len 
+                    if self.cfg["source_language_code"][:2] in ["zh", "ja", "jp", "ko"]
+                    else dynamic_other_len
+                )
+                
+                # 处理目标语言字幕
+                target_text = (
+                    textwrap.fill(it["text"].strip(), target_maxlen, replace_whitespace=False)
                     if self.cfg["subtitle_type"] == 3
                     else it["text"].strip()
                 )
-                srt_string += f"{it['line']}\n{it['time']}\n{tmp}"
+                
+                srt_string += f"{it['line']}\n{it['time']}\n{target_text}"
+                
+                # 处理源语言字幕（如果存在）
                 if source_length > 0 and i < source_length:
-                    srt_string += "\n" + (
+                    source_text = (
                         textwrap.fill(
-                            source_sub_list[i]["text"],
-                            maxlen_source,
-                            replace_whitespace=False,
+                            source_sub_list[i]["text"].strip(),
+                            source_maxlen,
+                            replace_whitespace=False
                         ).strip()
                         if self.cfg["subtitle_type"] == 3
-                        else source_sub_list[i]["text"]
+                        else source_sub_list[i]["text"].strip()
                     )
+                    srt_string += f"\n{source_text}"
+                
                 srt_string += "\n\n"
+            
+            # 保存处理后的字幕文件
             process_end_subtitle = f"{self.cfg['cache_folder']}/shuang.srt"
             with Path(process_end_subtitle).open("w", encoding="utf-8") as f:
                 f.write(srt_string.strip())
