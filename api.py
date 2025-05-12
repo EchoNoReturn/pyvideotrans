@@ -927,20 +927,7 @@ if __name__ == "__main__":
         retry_interval = 10
 
         for attempt in range(retry_count):
-            is_ok = True
-            response = None
-            num = 0
-            while(is_ok):
-                response = http_request.send_request(endpoint=endpoint, headers=headers)
-                if response["code"] == 0:
-                    is_ok = False
-                else:
-                    print("response=========================>")
-                    print(response)
-                    time.sleep(retry_interval)
-                    num += 1
-                if num == retry_count:
-                    raise Exception("生成签名 URL 失败")
+            response = http_request.send_request(endpoint=endpoint, headers=headers)
 
             if response["code"] == 0 and response["msg"]:
                 try:
