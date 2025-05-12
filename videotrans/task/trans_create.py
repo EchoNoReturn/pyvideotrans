@@ -607,12 +607,48 @@ class TransCreate(BaseTask):
         hash_code = calculate_file_hash(self.cfg["targetdir_mp4"])
 
         # 上传处理完成的视频至oss
+        # bucket = self.cfg["bucket"]
+        # object_key = str(uuid.uuid4())
+        # print(f"object_key==================>{object_key}")
+        # oss_headers = {"Content-Type": "video/mp4", "x-oss-meta-file-ext": ".mp4"}
+        # with open(self.cfg["targetdir_mp4"], "rb") as file:
+        #     result = bucket.put_object(object_key, file, headers=oss_headers)
+        #     result.resp.read()
+
+
+        from oss2.models import PartInfo  # 确保导入PartInfo
         bucket = self.cfg["bucket"]
         object_key = str(uuid.uuid4())
+        print(f"object_key==================>{object_key}")
         oss_headers = {"Content-Type": "video/mp4", "x-oss-meta-file-ext": ".mp4"}
-        with open(self.cfg["targetdir_mp4"], "rb") as file:
-            result = bucket.put_object(object_key, file, headers=oss_headers)
-            result.resp.read()
+        # 初始化分片上传
+        upload_id = bucket.init_multipart_upload(object_key, headers=oss_headers).upload_id
+        part_size = 1024 * 1024  # 设置为1MB的分片大小，可根据需要调整
+        parts = []
+
+        try:
+            with open(self.cfg["targetdir_mp4"], 'rb') as file:
+                part_number = 1
+                while True:
+                    data = file.read(part_size)
+                    if not data:
+                        break
+                    # 上传分片
+                    result = bucket.upload_part(object_key, upload_id, part_number, data)
+                    # 记录分片的编号和ETag
+                    parts.append(PartInfo(part_number, result.etag))
+                    part_number += 1
+
+            # 按分片编号排序（必须按1~n顺序）
+            parts.sort(key=lambda p: p.part_number)
+
+            # 完成分片上传
+            bucket.complete_multipart_upload(object_key, upload_id, parts)
+        except Exception as e:
+            # 出错则中止上传
+            bucket.abort_multipart_upload(object_key, upload_id)
+            raise e
+
 
         result_video_data = self._get_video_data(self.cfg["targetdir_mp4"])
         # 入库
@@ -642,6 +678,10 @@ class TransCreate(BaseTask):
         # execution_logs.append(f"结果视频信息：{str(result_video_data)}")
         tar_data = result_video_data
         config.logger.info(total_time_log)
+
+        from datetime import datetime
+        now = datetime.now()
+        config.logger.info(now.strftime("%Y-%m-%d %H:%M:%S"))        
 
         # 将日志信息转化为字符串
         execution_logs_str = "\n".join(execution_logs)

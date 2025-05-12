@@ -485,7 +485,7 @@ if __name__ == "__main__":
             "video_autorate": bool(data.get("video_autorate", False)),
             "volume": data.get("volume", "+0%"),
             "pitch": data.get("pitch", "+0Hz"),
-            "subtitle_type": int(data.get("subtitle_type", 0)),
+            "subtitle_type": 1,
             "append_video": bool(data.get("append_video", False)),
             "is_batch": True,
             "app_mode": "biaozhun",
@@ -927,7 +927,21 @@ if __name__ == "__main__":
         retry_interval = 10
 
         for attempt in range(retry_count):
-            response = http_request.send_request(endpoint=endpoint, headers=headers)
+            is_ok = True
+            response = None
+            num = 0
+            while(is_ok):
+                response = http_request.send_request(endpoint=endpoint, headers=headers)
+                if response["code"] == 0:
+                    is_ok = False
+                else:
+                    print("response=========================>")
+                    print(response)
+                    time.sleep(retry_interval)
+                    num += 1
+                if num == retry_count:
+                    raise Exception("生成签名 URL 失败")
+
             if response["code"] == 0 and response["msg"]:
                 try:
                     signed_url = bucket.sign_url("GET", response["msg"], 3600)
