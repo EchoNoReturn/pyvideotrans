@@ -31,7 +31,7 @@ from videotrans.tts import (
     AZURE_TTS,
     ELEVENLABS_TTS,
     SPARK_TTS,
-    INDEX_TTS
+    INDEX_TTS,
 )
 from videotrans.util import tools
 from ._base import BaseTask
@@ -44,7 +44,6 @@ class TransCreate(BaseTask):
     # （0）初始化配置和对象
     def __init__(self, cfg: Dict = None, obj: Dict = None):
         cfg_default = {
-            "oss_key": None,
             "cache_folder": None,
             "target_dir": None,
             "remove_noise": True,
@@ -76,7 +75,7 @@ class TransCreate(BaseTask):
         cfg_default.update(cfg)
         super().__init__(cfg_default, obj)
         # 记录开始时间
-        endpoint = "/vid/video/copyModify"
+        endpoint = "/py/video/modify"
         headers = {
             "Content-Type": "application/json",
         }
@@ -232,7 +231,6 @@ class TransCreate(BaseTask):
 
     # （1）开始预处理
     def prepare(self) -> None:
-        print("预处理================================================>")
         self._start_timer("预处理阶段")
         if self._exit():
             return
@@ -615,26 +613,29 @@ class TransCreate(BaseTask):
         #     result = bucket.put_object(object_key, file, headers=oss_headers)
         #     result.resp.read()
 
-
         from oss2.models import PartInfo  # 确保导入PartInfo
+
         bucket = self.cfg["bucket"]
         object_key = str(uuid.uuid4())
-        print(f"object_key==================>{object_key}")
         oss_headers = {"Content-Type": "video/mp4", "x-oss-meta-file-ext": ".mp4"}
         # 初始化分片上传
-        upload_id = bucket.init_multipart_upload(object_key, headers=oss_headers).upload_id
+        upload_id = bucket.init_multipart_upload(
+            object_key, headers=oss_headers
+        ).upload_id
         part_size = 1024 * 1024  # 设置为1MB的分片大小，可根据需要调整
         parts = []
 
         try:
-            with open(self.cfg["targetdir_mp4"], 'rb') as file:
+            with open(self.cfg["targetdir_mp4"], "rb") as file:
                 part_number = 1
                 while True:
                     data = file.read(part_size)
                     if not data:
                         break
                     # 上传分片
-                    result = bucket.upload_part(object_key, upload_id, part_number, data)
+                    result = bucket.upload_part(
+                        object_key, upload_id, part_number, data
+                    )
                     # 记录分片的编号和ETag
                     parts.append(PartInfo(part_number, result.etag))
                     part_number += 1
@@ -649,14 +650,12 @@ class TransCreate(BaseTask):
             bucket.abort_multipart_upload(object_key, upload_id)
             raise e
 
-
         result_video_data = self._get_video_data(self.cfg["targetdir_mp4"])
         # 入库
-        endpoint = "/vid/video/copyModify"
+        endpoint = "/py/video/modify"
         headers = {
             "Content-Type": "application/json",
         }
-
         # 计算各阶段的执行时间和百分比
         total_time = sum(
             stage["duration"]
@@ -675,13 +674,13 @@ class TransCreate(BaseTask):
                 config.logger.info(log_entry)
         total_time_log = f"总耗时: {total_time:.2f}s"
         execution_logs.append(total_time_log)
-        # execution_logs.append(f"结果视频信息：{str(result_video_data)}")
         tar_data = result_video_data
         config.logger.info(total_time_log)
 
         from datetime import datetime
+
         now = datetime.now()
-        config.logger.info(now.strftime("%Y-%m-%d %H:%M:%S"))        
+        config.logger.info(now.strftime("%Y-%m-%d %H:%M:%S"))
 
         # 将日志信息转化为字符串
         execution_logs_str = "\n".join(execution_logs)
@@ -700,7 +699,7 @@ class TransCreate(BaseTask):
             "codec": sou_data["codec"],
             "width": sou_data["width"],
             "height": sou_data["height"],
-            "tarHashCode": hash_code
+            "tarHashCode": hash_code,
         }
 
         # 发送请求
@@ -950,7 +949,8 @@ class TransCreate(BaseTask):
                 tmp_dict["ref_text"] = self.cfg["refer_text"]
             # 如果是clone-voice类型， 需要截取对应片段
             if (
-                self.cfg["tts_type"] in [COSYVOICE_TTS, CLONE_VOICE_TTS, F5_TTS, SPARK_TTS, INDEX_TTS]
+                self.cfg["tts_type"]
+                in [COSYVOICE_TTS, CLONE_VOICE_TTS, F5_TTS, SPARK_TTS, INDEX_TTS]
                 and voice_role == "clone"
             ):
                 if self.cfg["is_separate"] and not tools.vail_file(self.cfg["vocal"]):
@@ -1308,45 +1308,47 @@ class TransCreate(BaseTask):
         if self.cfg["subtitle_type"] in [3, 4]:
             source_sub_list = tools.get_subtitle_from_srt(self.cfg["source_sub"])
             source_length = len(source_sub_list)
-            
+
             srt_string = ""
             for i, it in enumerate(target_sub_list):
                 # 动态计算每行字符数（区分语言）
                 target_maxlen = (
-                    dynamic_cjk_len 
+                    dynamic_cjk_len
                     if self.cfg["target_language_code"][:2] in ["zh", "ja", "jp", "ko"]
                     else dynamic_other_len
                 )
                 source_maxlen = (
-                    dynamic_cjk_len 
+                    dynamic_cjk_len
                     if self.cfg["source_language_code"][:2] in ["zh", "ja", "jp", "ko"]
                     else dynamic_other_len
                 )
-                
+
                 # 处理目标语言字幕
                 target_text = (
-                    textwrap.fill(it["text"].strip(), target_maxlen, replace_whitespace=False)
+                    textwrap.fill(
+                        it["text"].strip(), target_maxlen, replace_whitespace=False
+                    )
                     if self.cfg["subtitle_type"] == 3
                     else it["text"].strip()
                 )
-                
+
                 srt_string += f"{it['line']}\n{it['time']}\n{target_text}"
-                
+
                 # 处理源语言字幕（如果存在）
                 if source_length > 0 and i < source_length:
                     source_text = (
                         textwrap.fill(
                             source_sub_list[i]["text"].strip(),
                             source_maxlen,
-                            replace_whitespace=False
+                            replace_whitespace=False,
                         ).strip()
                         if self.cfg["subtitle_type"] == 3
                         else source_sub_list[i]["text"].strip()
                     )
                     srt_string += f"\n{source_text}"
-                
+
                 srt_string += "\n\n"
-            
+
             # 保存处理后的字幕文件
             process_end_subtitle = f"{self.cfg['cache_folder']}/shuang.srt"
             with Path(process_end_subtitle).open("w", encoding="utf-8") as f:

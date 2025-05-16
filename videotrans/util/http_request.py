@@ -5,7 +5,7 @@ class http_request:
 
     @staticmethod
     def send_request(endpoint, method="POST", body=None, headers=None):
-        url = f"http://127.0.0.1:8080{endpoint}"
+        url = f"http://127.0.0.1:8090/front{endpoint}"
         try:
             response = requests.request(method, url, json=body, headers=headers)
             response.raise_for_status()

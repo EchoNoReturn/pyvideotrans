@@ -32,10 +32,10 @@ if __name__ == "__main__":
 
     # 设置根目录和默认主机、端口
     ROOT_DIR = config.ROOT_DIR
-    # HOST = "127.0.0.1"
-    # PORT = 9011
-    HOST = "0.0.0.0"
-    PORT = 8086
+    HOST = "127.0.0.1"
+    PORT = 9011
+    # HOST = "0.0.0.0"
+    # PORT = 8086
 
     # 读取 host.txt 设置主机和端口
     host_file = Path(ROOT_DIR + "/host.txt")
@@ -448,56 +448,50 @@ if __name__ == "__main__":
         name = data.get("name", "")
         if not name:
             name = _download_file(
-                data.get("object_key"),
+                data.get("objectKey"),
                 os.path.join(config.TEMP_DIR, "video_input_cache"),
             )
             if not name:
-                return jsonify(
-                    {"code": 1, "msg": "The parameter name is not allowed to be empty"}
-                )
+                return jsonify({"code": 1, "msg": "未找到OSS Key对应的文件信息"})
         if not Path(name).exists():
-            return jsonify({"code": 1, "msg": f"The file {name} is not exist"})
-
+            return jsonify({"code": 1, "msg": f"文件 {name} 不存在"})
+        print(data.get("isCheck"))
         cfg = {
             # 通用
             "name": name,
-            "oss_key": data.get("object_key", None),
-            "is_separate": bool(data.get("is_separate", False)),
-            "back_audio": data.get("back_audio", ""),
             "hashCode": data.get("hashCode"),  # 文件哈希值
+            "cuda": bool(data.get("cuda", False)),  # cuda加速
+            "isCheck": bool(data.get("check", True)),  # 重复校验
             # 识别
             "recogn_type": 0,
-            "split_type": data.get("split_type", "all"),
-            "model_name": "large-v3-turbo",  # options: tiny/medium/large-2/large-v3/large-v3-turbo
-            "cuda": bool(data.get("is_cuda", False)),
-            "subtitles": data.get("subtitles", ""),
+            "model_name": "tiny",  # options: tiny/medium/large-2/large-v3/large-v3-turbo
             # 翻译
-            "translate_type": int(data.get("translate_type", 1)),
-            "target_language": data.get("target_language"),
-            "source_language": data.get("source_language"),
+            "translate_type": 19,
+            "source_language": data.get("sourceLanguage"),
+            "target_language": data.get("targetLanguage"),
             # 配音
             "tts_type": 1,
-            "voice_role": data.get("voice_role", "clone"),  # clone-single
-            "refer_audio": data.get("refer_audio", ""),  # 参考音频oss
-            "refer_text": data.get("refer_text", ""),  # 参考文本
-            "voice_rate": data.get("voice_rate", "+0%"),
-            "voice_autorate": bool(data.get("voice_autorate", True)),
-            "video_autorate": bool(data.get("video_autorate", False)),
-            "volume": data.get("volume", "+0%"),
-            "pitch": data.get("pitch", "+0Hz"),
+            "voice_role": data.get("voiceRole", "clone"),  # clone-single
+            "refer_audio": data.get("referAudio", ""),  # 参考音频oss
+            "refer_text": data.get("referText", ""),  # 参考文本
+            # 其他
+            "back_audio": "",
+            "is_separate": False,
+            "subtitles": "",
+            "split_type": "all",
+            "voice_rate": "+0%",
+            "voice_autorate": True,
+            "video_autorate": False,
+            "volume": "+0%",
+            "pitch": "+0Hz",
             "subtitle_type": 1,
-            "append_video": bool(data.get("append_video", False)),
+            "append_video": False,
             "is_batch": True,
             "app_mode": "biaozhun",
-            "only_video": bool(data.get("only_video", False)),
+            "only_video": False,
             # 存储桶
             "bucket": bucket,
-            # 其他
-            "isCheck": bool(data.get("isCheck", True)),
         }
-
-        # 修改翻译渠道
-        cfg["translate_type"] = 19
 
         # 自定义音色
         if (
@@ -554,82 +548,76 @@ if __name__ == "__main__":
         cfg.update(obj)
 
         # 获取用户id
-        endpoint = f"/vid/video/getMemberId?name={data.get('memberId',None)}"
-        headers = {"Content-Type": "application/json"}
-        response = http_request.send_request(endpoint=endpoint, headers=headers)
+        response = http_request.send_request(
+            endpoint=f"/py/video/getMemberId?name={data.get('memberId',None)}",
+            headers={"Content-Type": "application/json"},
+        )
         if response["code"] != 0:
             return jsonify({"code": 1, "msg": "用户信息获取出错"})
         else:
-            cfg["memberId"] = response["msg"]
+            cfg["memberId"] = response["data"]
 
-        # 入库
-        endpoint = "/vid/video/copyModify"
-        headers = {
-            "Content-Type": "application/json",
-        }
-        video_data = {
-            "processStatus": "VIDEO_STATUS_PROCEED",
-            "souLanguage": cfg["source_language"],
-            "tarLanguage": cfg["target_language"],
-            "hashCode": cfg["hashCode"],
-            "uploadTime": data.get("uploadTime", int(time.time() * 1000)),
-            "ossVideoKey": data.get("object_key"),
-            "taskId": obj["uuid"],
-            "memberId": cfg["memberId"],
-            "recModel": cfg["recogn_type"],
-            "recModelName": cfg["model_name"],
-            "traModel": cfg["translate_type"],
-            "dubModel": cfg["tts_type"],
-        }
+        # 翻译信息入库
         response = http_request.send_request(
-            endpoint=endpoint, body=video_data, headers=headers
-        )
-        cfg["record_id"] = response["msg"]
-        if response["code"] != 0:
-            return jsonify({"code": 1, "msg": "视频信息记录出错"})
-
-        # 判断是否存在相同翻译视频
-        if cfg["isCheck"]:
-            endpoint = "/vid/video/isExist"
-            headers = {
+            endpoint="/py/video/modify",
+            headers={
                 "Content-Type": "application/json",
-            }
-            video_data = {
-                "id": cfg["record_id"],
+            },
+            body={
+                "processStatus": "VIDEO_STATUS_PROCEED",
+                "souLanguage": cfg["source_language"],
                 "tarLanguage": cfg["target_language"],
                 "hashCode": cfg["hashCode"],
-            }
+                "uploadTime": data.get("uploadTime", int(time.time() * 1000)),
+                "ossVideoKey": data.get("objectKey"),
+                "taskId": obj["uuid"],
+                "memberId": cfg["memberId"],
+                "recModel": cfg["recogn_type"],
+                "recModelName": cfg["model_name"],
+                "traModel": cfg["translate_type"],
+                "dubModel": cfg["tts_type"],
+            },
+        )
+        cfg["record_id"] = response["data"]
+        if response["code"] != 0:
+            return jsonify({"code": 1, "msg": "视频信息首次记录出错"})
+
+        # 判断是否存在相同翻译视频
+        print(cfg["isCheck"])
+        if cfg["isCheck"]:
             response = http_request.send_request(
-                endpoint=endpoint, body=video_data, headers=headers
+                endpoint="/py/video/isExist",
+                headers={
+                    "Content-Type": "application/json",
+                },
+                body={
+                    "id": cfg["record_id"],
+                    "tarLanguage": cfg["target_language"],
+                    "hashCode": cfg["hashCode"],
+                },
             )
             if response["code"] == 0:
                 # 响应
-                signed_url = bucket.sign_url("GET", response["msg"], 3600)
-                if signed_url != None:
-                    return jsonify({"code": 403, "signed_url": signed_url})
-
-        
-
-      
-        response = http_request.send_request(
-            endpoint="/vid/video/getSouByTar", 
-            body={
-                "hashCode":cfg["hashCode"],
-                "tarLanguage":cfg["target_language"],
-                "souLanguage":cfg["source_language"]
-            }, 
-            headers={
-                "Content-Type": "application/json",
-            }
-        )
-        if response["code"] == 0:
-                print("响应==============================>")
-                print(response)
-                # 响应
                 signed_url = bucket.sign_url("GET", response["data"], 3600)
                 if signed_url != None:
-                    return jsonify({"code": 403, "signed_url": signed_url})
-           
+                    return jsonify({"code": 403, "data": {"signed_url": signed_url}})
+
+        response = http_request.send_request(
+            endpoint="/py/video/getSouByTar",
+            body={
+                "hashCode": cfg["hashCode"],
+                "tarLanguage": cfg["target_language"],
+                "souLanguage": cfg["source_language"],
+            },
+            headers={
+                "Content-Type": "application/json",
+            },
+        )
+        if response["code"] == 0:
+            # 响应
+            signed_url = bucket.sign_url("GET", response["data"], 3600)
+            if signed_url != None:
+                return jsonify({"code": 403, "data": {"signed_url": signed_url}})
 
         config.current_status = "ing"
         trk = TransCreate(cfg)
@@ -637,7 +625,13 @@ if __name__ == "__main__":
         tools.set_process(
             text=f"Currently in queue No.{len(config.prepare_queue)}", uuid=obj["uuid"]
         )
-        return jsonify({"code": 0, "task_id": obj["uuid"], "id": cfg["record_id"]})
+        return jsonify(
+            {
+                "code": 0,
+                "data": {"task_id": obj["uuid"], "id": cfg["record_id"]},
+                "msg": "success",
+            }
+        )
 
     # 获取任务进度接口
     """
@@ -748,11 +742,10 @@ if __name__ == "__main__":
             data = json.loads(f.read())
             if data["is_save"] == False:
                 if data["is_ok"]:
-                    endpoint = f"/vid/video/saveTranslateContent"
-                    headers = {"Content-Type": "application/json"}
-                    body = {"id": id, "translateContent": data["text"]}
                     response = http_request.send_request(
-                        endpoint=endpoint, body=body, headers=headers
+                        endpoint=f"/py/video/saveTranslateContent",
+                        body={"id": id, "translateContent": data["text"]},
+                        headers={"Content-Type": "application/json"},
                     )
                     if response.get("code") != 0:
                         raise Exception("识别和翻译内容保存失败")
@@ -762,90 +755,17 @@ if __name__ == "__main__":
                         json.dump(data, f, ensure_ascii=False, indent=4)
             return data["text"]
 
-    # 获取文件上传地址
-    @app.route("/get_upload_url", methods=["POST"])
-    def get_upload_url():
-        try:
-            file_name = request.json.get("fileName")
-            if not file_name:
-                return jsonify({"code": 1, "msg": "The file name does not exist"})
-            content_type = request.json.get("contentType")
-            content_type = content_type if content_type else "application/octet-stream"
-
-            # 获取文件扩展名
-            _, file_ext = os.path.splitext(file_name)
-            # 生成唯一文件名
-            object_key = str(uuid.uuid4())
-            # 生成预签名URL，有效期30分钟
-            headers = {"Content-Type": content_type, "x-oss-meta-file-ext": file_ext}
-            url = bucket.sign_url("PUT", object_key, 30 * 60, headers=headers)
-            return jsonify(
-                {
-                    "code": 0,
-                    "uploadUrl": url,
-                    "objectKey": object_key,
-                    "Content-Type": content_type,
-                    "x-oss-meta-file-ext": file_ext,
-                }
-            )
-        except Exception as e:
-            return jsonify({"code": 1, "msg": str(e)})
-
-    # 文件上传初始化
-    @app.route("/oss-init", methods=["GET"])
-    def oss_init():
-        endpoint = f"/oss/file/init"
-        headers = {"Content-Type": "application/json"}
-        response = http_request.send_request(endpoint=endpoint, headers=headers)
-        return response
-
-    # 获取文件上传地址
-    @app.route("/oss-url", methods=["POST"])
-    def oss_url():
-        endpoint = f"/oss/file/url"
-        headers = {"Content-Type": "application/json"}
-        uploadId = request.json.get("uploadId")
-        objectName = request.json.get("objectName")
-        partNumber = request.json.get("partNumber")
-        contentType = request.json.get("contentType")
-        body = {
-            "uploadId": uploadId,
-            "objectName": objectName,
-            "partNumber": partNumber,
-            "contentType": contentType,
-        }
-        response = http_request.send_request(
-            endpoint=endpoint, body=body, headers=headers
-        )
-        return response
-
-    # 取消文件上传
-    @app.route("/oss-cancel", methods=["POST"])
-    def oss_cancel():
-        endpoint = f"/oss/file/cancel"
-        headers = {"Content-Type": "application/json"}
-        uploadId = request.json.get("uploadId")
-        objectName = request.json.get("objectName")
-        body = {
-            "uploadId": uploadId,
-            "objectName": objectName,
-        }
-        response = http_request.send_request(
-            endpoint=endpoint, body=body, headers=headers
-        )
-        return response
-
-    # 合并文件
-    @app.route("/oss-merge", methods=["POST"])
-    def oss_merge():
-        endpoint = f"/oss/file/merge"
-        headers = {"Content-Type": "application/json"}
         uploadId = request.json.get("uploadId")
         objectName = request.json.get("objectName")
         partETags = request.json.get("partETags")
-        body = {"uploadId": uploadId, "objectName": objectName, "partETags": partETags}
         response = http_request.send_request(
-            endpoint=endpoint, body=body, headers=headers
+            endpoint=f"/oss/file/merge",
+            headers={"Content-Type": "application/json"},
+            body={
+                "uploadId": uploadId,
+                "objectName": objectName,
+                "partETags": partETags,
+            },
         )
         return response
 
@@ -919,39 +839,12 @@ if __name__ == "__main__":
             for name in file_list
         ]
 
-        # 生成签名 URL
-        endpoint = f"/vid/video/targetVideo?id={id}"
-        headers = {"Content-Type": "application/json"}
-        signed_url = None
-        retry_count = 12
-        retry_interval = 10
-
-        for attempt in range(retry_count):
-            response = http_request.send_request(endpoint=endpoint, headers=headers)
-
-            if response["code"] == 0 and response["msg"]:
-                try:
-                    signed_url = bucket.sign_url("GET", response["msg"], 3600)
-                    break  # 成功生成签名 URL，退出轮询
-                except oss2.exceptions.ClientError as e:
-                    print(f"OSS ClientError: {e}")
-                    signed_url = None
-            else:
-                print(
-                    f"轮询尝试 {attempt + 1}/{retry_count} 失败，响应码: {response['code']}"
-                )
-                time.sleep(retry_interval)
-
-        if signed_url is None:
-            raise Exception("无法生成签名 URL，请检查网络或配置")
         res = {
             "code": 0,
             "msg": _cobine_subtitle_translation_content("ok", stc),
             "data": {
                 "absolute_path": absolute_path,
                 "url": url,
-                "signed_url": signed_url,
-                "file_ext": ".mp4",
             },
         }
         return res
