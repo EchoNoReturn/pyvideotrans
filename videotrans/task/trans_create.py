@@ -708,6 +708,8 @@ class TransCreate(BaseTask):
         )
         if response["code"] != 0:
             print("视频信息记录出错")
+        from WebSocketClient import WebSocketClient
+        WebSocketClient("ws://127.0.0.1:9080/ws/getNewTask").send(1).run()
 
     # ====================== 内部方法 ====================== #
 

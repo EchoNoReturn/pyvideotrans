@@ -456,6 +456,7 @@ if __name__ == "__main__":
         if not Path(name).exists():
             return jsonify({"code": 1, "msg": f"文件 {name} 不存在"})
         print(data.get("isCheck"))
+        redisKey = f"{data.get('redisKey')}"
         cfg = {
             # 通用
             "name": name,
@@ -576,6 +577,7 @@ if __name__ == "__main__":
                 "recModelName": cfg["model_name"],
                 "traModel": cfg["translate_type"],
                 "dubModel": cfg["tts_type"],
+                "redisKey": redisKey
             },
         )
         cfg["record_id"] = response["data"]
