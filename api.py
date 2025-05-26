@@ -456,9 +456,9 @@ if __name__ == "__main__":
         if not Path(name).exists():
             return jsonify({"code": 1, "msg": f"文件 {name} 不存在"})
         print(data.get("isCheck"))
-        redisKey = f"{data.get('redisKey')}"
         cfg = {
             # 通用
+            "dataId": data.get("dataId"),
             "name": name,
             "hashCode": data.get("hashCode"),  # 文件哈希值
             "cuda": bool(data.get("cuda", False)),  # cuda加速
@@ -565,6 +565,7 @@ if __name__ == "__main__":
                 "Content-Type": "application/json",
             },
             body={
+                "id": cfg["dataId"],
                 "processStatus": "VIDEO_STATUS_PROCEED",
                 "souLanguage": cfg["source_language"],
                 "tarLanguage": cfg["target_language"],
@@ -577,7 +578,7 @@ if __name__ == "__main__":
                 "recModelName": cfg["model_name"],
                 "traModel": cfg["translate_type"],
                 "dubModel": cfg["tts_type"],
-                "redisKey": redisKey
+                "redisKey": data.get('redisKey')
             },
         )
         cfg["record_id"] = response["data"]
@@ -585,41 +586,41 @@ if __name__ == "__main__":
             return jsonify({"code": 1, "msg": "视频信息首次记录出错"})
 
         # 判断是否存在相同翻译视频
-        print(cfg["isCheck"])
-        if cfg["isCheck"]:
-            response = http_request.send_request(
-                endpoint="/py/video/isExist",
-                headers={
-                    "Content-Type": "application/json",
-                },
-                body={
-                    "id": cfg["record_id"],
-                    "tarLanguage": cfg["target_language"],
-                    "hashCode": cfg["hashCode"],
-                },
-            )
-            if response["code"] == 0:
-                # 响应
-                signed_url = bucket.sign_url("GET", response["data"], 3600)
-                if signed_url != None:
-                    return jsonify({"code": 403, "data": {"signed_url": signed_url}})
+        # print(cfg["isCheck"])
+        # if cfg["isCheck"]:
+        #     response = http_request.send_request(
+        #         endpoint="/py/video/isExist",
+        #         headers={
+        #             "Content-Type": "application/json",
+        #         },
+        #         body={
+        #             "id": cfg["record_id"],
+        #             "tarLanguage": cfg["target_language"],
+        #             "hashCode": cfg["hashCode"],
+        #         },
+        #     )
+        #     if response["code"] == 0:
+        #         # 响应
+        #         signed_url = bucket.sign_url("GET", response["data"], 3600)
+        #         if signed_url != None:
+        #             return jsonify({"code": 403, "data": {"signed_url": signed_url}})
 
-        response = http_request.send_request(
-            endpoint="/py/video/getSouByTar",
-            body={
-                "hashCode": cfg["hashCode"],
-                "tarLanguage": cfg["target_language"],
-                "souLanguage": cfg["source_language"],
-            },
-            headers={
-                "Content-Type": "application/json",
-            },
-        )
-        if response["code"] == 0:
-            # 响应
-            signed_url = bucket.sign_url("GET", response["data"], 3600)
-            if signed_url != None:
-                return jsonify({"code": 403, "data": {"signed_url": signed_url}})
+        # response = http_request.send_request(
+        #     endpoint="/py/video/getSouByTar",
+        #     body={
+        #         "hashCode": cfg["hashCode"],
+        #         "tarLanguage": cfg["target_language"],
+        #         "souLanguage": cfg["source_language"],
+        #     },
+        #     headers={
+        #         "Content-Type": "application/json",
+        #     },
+        # )
+        # if response["code"] == 0:
+        #     # 响应
+        #     signed_url = bucket.sign_url("GET", response["data"], 3600)
+        #     if signed_url != None:
+        #         return jsonify({"code": 403, "data": {"signed_url": signed_url}})
 
         config.current_status = "ing"
         trk = TransCreate(cfg)
