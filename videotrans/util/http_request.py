@@ -1,11 +1,17 @@
 import requests
 import json
+import os
+from pathlib import Path
 
 class http_request:
 
     @staticmethod
     def send_request(endpoint, method="POST", body=None, headers=None):
-        url = f"http://127.0.0.1:8090/front{endpoint}"
+        java_config_file_path =  Path(__file__).parent.resolve() / "config.json"
+        java_server_port = ""
+        with open(java_config_file_path, "r", encoding="utf-8") as f:
+            java_server_port = json.loads(f.read())["java_server_prot"]
+        url = f"http://127.0.0.1:{java_server_port}/front{endpoint}"
         try:
             response = requests.request(method, url, json=body, headers=headers)
             response.raise_for_status()

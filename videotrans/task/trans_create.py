@@ -684,7 +684,12 @@ class TransCreate(BaseTask):
 
         # 将日志信息转化为字符串
         execution_logs_str = "\n".join(execution_logs)
-
+        print(f"id ==============> {self.cfg["record_id"]}")
+        task_id = self.cfg["task_id"]
+        file_path = os.path.join(Path(__file__).resolve().parents[2] , "apidata", task_id, task_id + ".json")
+        translator_text = ""
+        with open(file_path, "r", encoding="utf-8") as f:
+            translator_text = json.loads(f.read())["text"]
         # 构造请求参数
         video_data = {
             "id": self.cfg["record_id"],
@@ -700,16 +705,24 @@ class TransCreate(BaseTask):
             "width": sou_data["width"],
             "height": sou_data["height"],
             "tarHashCode": hash_code,
+            "translateContent":translator_text
         }
-
         # 发送请求
         response = http_request.send_request(
             endpoint=endpoint, body=video_data, headers=headers
         )
         if response["code"] != 0:
             print("视频信息记录出错")
-        from WebSocketClient import WebSocketClient
-        WebSocketClient("ws://127.0.0.1:9080/ws/getNewTask").send(1).run()
+        from .WebSocketClient import WebSocketClient
+        java_config_file_path = Path(__file__).resolve().parents[1] / "util" / "config.json"
+        print(java_config_file_path)
+        java_server_port = ""
+        with open(java_config_file_path, "r", encoding="utf-8") as f:
+            java_server_port = json.loads(f.read())["java_server_prot"]
+        ws_client = WebSocketClient(f"ws://127.0.0.1:{java_server_port}/ws/getNewTask")
+        # ws_client.run()
+        time.sleep(1)
+        ws_client.send(1)
 
     # ====================== 内部方法 ====================== #
 

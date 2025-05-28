@@ -16,11 +16,6 @@ class WebSocketClient:
 
     def on_open(self, ws):
         print(" websocket connection successful============================> ")
-        ws.send({
-            "type": "text",
-            "from": "python-client",
-            "data": "hello java"
-        })
 
     def on_message(self, ws, message):
         print("websocket msg：", json.loads(message))

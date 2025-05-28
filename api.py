@@ -548,6 +548,7 @@ if __name__ == "__main__":
         Path(obj["target_dir"]).mkdir(parents=True, exist_ok=True)
         cfg.update(obj)
 
+        cfg["task_id"] = obj["uuid"]
         # 获取用户id
         response = http_request.send_request(
             endpoint=f"/py/video/getMemberId?name={data.get('memberId',None)}",
@@ -743,19 +744,19 @@ if __name__ == "__main__":
             return ""
         with open(path, "r", encoding="utf-8") as f:
             data = json.loads(f.read())
-            if data["is_save"] == False:
-                if data["is_ok"]:
-                    response = http_request.send_request(
-                        endpoint=f"/py/video/saveTranslateContent",
-                        body={"id": id, "translateContent": data["text"]},
-                        headers={"Content-Type": "application/json"},
-                    )
-                    if response.get("code") != 0:
-                        raise Exception("识别和翻译内容保存失败")
-                    # print("======= 保存成功 ========")
-                    data["is_save"] = True
-                    with open(Path(path), "w", encoding="utf-8") as f:
-                        json.dump(data, f, ensure_ascii=False, indent=4)
+            # if data["is_save"] == False:
+            #     if data["is_ok"]:
+            #         response = http_request.send_request(
+            #             endpoint=f"/py/video/saveTranslateContent",
+            #             body={"id": id, "translateContent": data["text"]},
+            #             headers={"Content-Type": "application/json"},
+            #         )
+            #         if response.get("code") != 0:
+            #             raise Exception("识别和翻译内容保存失败")
+            #         # print("======= 保存成功 ========")
+            #         data["is_save"] = True
+            #         with open(Path(path), "w", encoding="utf-8") as f:
+            #             json.dump(data, f, ensure_ascii=False, indent=4)
             return data["text"]
 
         uploadId = request.json.get("uploadId")
