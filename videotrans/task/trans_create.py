@@ -719,10 +719,10 @@ class TransCreate(BaseTask):
         java_server_port = ""
         with open(java_config_file_path, "r", encoding="utf-8") as f:
             java_server_port = json.loads(f.read())["java_server_prot"]
-        ws_client = WebSocketClient(f"ws://127.0.0.1:{java_server_port}/ws/getNewTask")
-        # ws_client.run()
-        time.sleep(1)
-        ws_client.send(1)
+        ws_client = WebSocketClient(f"ws://127.0.0.1:{java_server_port}/front/ws/getNewTask")
+        ws_client.run()
+        time.sleep(2) # 休眠2s防止还未建立连接就关闭了...
+        ws_client.send({"from":"client"})
 
     # ====================== 内部方法 ====================== #
 
