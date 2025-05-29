@@ -684,7 +684,7 @@ class TransCreate(BaseTask):
 
         # 将日志信息转化为字符串
         execution_logs_str = "\n".join(execution_logs)
-        print(f"id ==============> {self.cfg["record_id"]}")
+        print(f"id ==============> {self.cfg['record_id']}")
         task_id = self.cfg["task_id"]
         file_path = os.path.join(Path(__file__).resolve().parents[2] , "apidata", task_id, task_id + ".json")
         translator_text = ""

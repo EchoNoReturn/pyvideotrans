@@ -95,6 +95,15 @@ if __name__ == "__main__":
     except Exception as e:
         print("\n❌ 连接 OSS 失败:", str(e))
 
+    java_config_file_path = Path(__file__).resolve().parent / "videotrans" / "util" / "config.json"
+    java_server_port = ""
+    with open(java_config_file_path, "r", encoding="utf-8") as f:
+        java_server_port = json.loads(f.read())["java_server_prot"]
+    from videotrans.task.WebSocketClient import WebSocketClient
+    ws_client = WebSocketClient(f"ws://127.0.0.1:{java_server_port}/front/ws/getNewTask")
+    ws_client.run()
+    time.sleep(2)
+    ws_client.send({"from":"string"})
     ###### 接口分割线 ######
 
     # 第1个接口 /tts
