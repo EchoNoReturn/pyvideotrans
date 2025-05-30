@@ -686,7 +686,9 @@ class TransCreate(BaseTask):
         execution_logs_str = "\n".join(execution_logs)
         print(f"id ==============> {self.cfg['record_id']}")
         task_id = self.cfg["task_id"]
-        file_path = os.path.join(Path(__file__).resolve().parents[2] , "apidata", task_id, task_id + ".json")
+        file_path = os.path.join(
+            Path(__file__).resolve().parents[2], "apidata", task_id, task_id + ".json"
+        )
         translator_text = ""
         with open(file_path, "r", encoding="utf-8") as f:
             translator_text = json.loads(f.read())["text"]
@@ -705,7 +707,7 @@ class TransCreate(BaseTask):
             "width": sou_data["width"],
             "height": sou_data["height"],
             "tarHashCode": hash_code,
-            "translateContent":translator_text
+            "translateContent": translator_text,
         }
         # 发送请求
         response = http_request.send_request(
@@ -714,15 +716,20 @@ class TransCreate(BaseTask):
         if response["code"] != 0:
             print("视频信息记录出错")
         from .WebSocketClient import WebSocketClient
-        java_config_file_path = Path(__file__).resolve().parents[1] / "util" / "config.json"
+
+        java_config_file_path = (
+            Path(__file__).resolve().parents[1] / "util" / "config.json"
+        )
         print(java_config_file_path)
         java_server_port = ""
         with open(java_config_file_path, "r", encoding="utf-8") as f:
             java_server_port = json.loads(f.read())["java_server_prot"]
-        ws_client = WebSocketClient(f"ws://127.0.0.1:{java_server_port}/front/ws/getNewTask")
+        ws_client = WebSocketClient(
+            f"ws://127.0.0.1:{java_server_port}/front/ws/getNewTask"
+        )
         ws_client.run()
-        time.sleep(2) # 休眠2s防止还未建立连接就关闭了...
-        ws_client.send({"from":"client"})
+        time.sleep(2)  # 休眠2s防止还未建立连接就关闭了...
+        ws_client.send({"from": "client"})
 
     # ====================== 内部方法 ====================== #
 
@@ -1277,11 +1284,23 @@ class TransCreate(BaseTask):
         width = self.cfg["origin_video_data"]["width"]
         height = self.cfg["origin_video_data"]["height"]
         # 动态计算字体大小（基于视频高度）
-        fontsize = max(8, min(int(height * 0.005), 24))
-        # 动态计算行字符数
-        safe_width = width * 0.2
-        dynamic_cjk_len = max(12, min(int(safe_width / fontsize), 24))
-        dynamic_other_len = max(24, min(int(safe_width / (fontsize * 0.2)), 60))
+        short_side = min(width, height)
+        aspect_ratio = width / height
+
+        # 1. 动态计算字体大小（区分横屏/竖屏）
+        if aspect_ratio < 1:  # 竖屏视频
+            fontsize = max(8, min(int(height * 0.003), 16))  # 竖屏字体稍小
+        else:  # 横屏视频
+            fontsize = max(12, min(int(short_side * 0.005), 24))
+
+        # 2. 动态计算安全宽度
+        if aspect_ratio < 1:  # 竖屏
+            safe_width = width * 0.2
+        else:  # 横屏
+            safe_width = width * 0.4
+
+        dynamic_cjk_len = max(16, min(int(safe_width / fontsize), 32))
+        dynamic_other_len = max(24, min(int(safe_width / (fontsize * 0.2)), 64))
 
         print(f"width:{width}")
         print(f"height:{height}")

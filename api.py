@@ -474,7 +474,7 @@ if __name__ == "__main__":
             "isCheck": bool(data.get("check", True)),  # 重复校验
             # 识别
             "recogn_type": 0,
-            "model_name": "tiny",  # options: tiny/medium/large-2/large-v3/large-v3-turbo
+            "model_name": "large-v3-turbo",  # options: tiny/medium/large-2/large-v3/large-v3-turbo
             # 翻译
             "translate_type": 19,
             "source_language": data.get("sourceLanguage"),
@@ -558,6 +558,7 @@ if __name__ == "__main__":
         cfg.update(obj)
 
         cfg["task_id"] = obj["uuid"]
+        
         # 获取用户id
         response = http_request.send_request(
             endpoint=f"/py/video/getMemberId?name={data.get('memberId',None)}",
