@@ -231,6 +231,7 @@ class TransCreate(BaseTask):
 
     # （1）开始预处理
     def prepare(self) -> None:
+        self._saveStatus(self.cfg['record_id'], "VIDEO_STATUS_PROCEED_PRETREATMENT")
         self._start_timer("预处理阶段")
         if self._exit():
             return
@@ -242,6 +243,7 @@ class TransCreate(BaseTask):
 
     # （2）开始语音识别
     def recogn(self) -> None:
+        self._saveStatus(self.cfg['record_id'], "VIDEO_STATUS_PROCEED_SPEECH_RECOGNITION")
         self._start_timer("语音识别")
         if self._exit():
             return
@@ -432,6 +434,7 @@ class TransCreate(BaseTask):
 
     # （3）开始字幕翻译
     def trans(self) -> None:
+        self._saveStatus(self.cfg['record_id'], "VIDEO_STATUS_PROCEED_SUBTITLING")
         self._start_timer("字幕翻译")
         if self._exit():
             return
@@ -491,6 +494,7 @@ class TransCreate(BaseTask):
 
     # （4）开始配音
     def dubbing(self) -> None:
+        self._saveStatus(self.cfg['record_id'], "VIDEO_STATUS_PROCEED_DUB")
         self._start_timer("配音阶段")
         if self._exit():
             return
@@ -539,6 +543,7 @@ class TransCreate(BaseTask):
 
     # （5）开始视频合成
     def assembling(self) -> None:
+        self._saveStatus(self.cfg['record_id'], "VIDEO_STATUS_PROCEED_VIDEO_COMPOSITING")
         self._start_timer("合成阶段")
         if self._exit():
             return
@@ -1661,6 +1666,19 @@ class TransCreate(BaseTask):
         self.hasend = True
         return True
 
+    def _saveStatus(self, id, processStatus) -> None:
+        resp = http_request.send_request(
+                endpoint="/py/video/updateStatus",
+                body={
+                    "id":id,
+                    "processStatus":processStatus
+                },
+                headers={
+                "Content-Type": "application/json",
+            }
+        )
+        if resp["code"] != 0:
+            raise Exception("视频状态记录出错")
     # ffmpeg进度日志
     def _hebing_pro(self, protxt) -> None:
         basenum = 100 - self.precent
