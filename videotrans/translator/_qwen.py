@@ -29,7 +29,7 @@ class Qwen(BaseTrans):
     def openAI(content, old_language, new_language):
         return OpenAI(
             # https://bailian.console.aliyun.com/#/model-market/detail/qwen-mt-turbo
-            api_key='sk-f6965dc7766b4b8e84c868dffac30425',
+            api_key='sk-212dfdbb67b349a281620667e9afdcd6',
             base_url='https://dashscope.aliyuncs.com/compatible-mode/v1',
         ).chat.completions.create(
             # options: 
