@@ -61,8 +61,35 @@ class Qwen(BaseTrans):
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
         uuid = self.uuid
 
-        # file_path = os.path.join(project_root, "apidata", "processinfo")
-        # file_name = uuid+".json"
+        from flashtext import KeywordProcessor
+        keyword_processor = KeywordProcessor()
+        from videotrans.util.http_request import http_request
+        endpoint = "/py/keyword/all"
+        dict = http_request.send_request(endpoint=endpoint)
+        if dict['data'] is not None:
+            for item in dict['data']:
+                keyword_processor.add_keyword(item['data'], '*' * len(item['data']))
+
+        import re
+        srt_file_path = os.path.join(project_root, "apidata", "zh-cn.srt")
+        time_pattern = re.compile(r'^\d{2}:\d{2}:\d{2},\d{3} -->')
+        with open(srt_file_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        new_lines = []
+        for line in lines:
+            line_strip = line.strip()
+            if line_strip.isdigit() or time_pattern.match(line_strip) or line_strip == '':
+                new_lines.append(line)
+            else:
+                try:
+                    line = keyword_processor.replace_keywords(line)
+                except Exception as e:
+                    import datetime
+                    print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}替换出错：{e}")
+                    raise Exception("替换出错，请检查输入")
+                new_lines.append(line)
+        with open(srt_file_path, 'w', encoding='utf-8') as f:
+            f.writelines(new_lines)
 
 
         file_path = os.path.join(project_root, "apidata", uuid)
@@ -83,7 +110,7 @@ class Qwen(BaseTrans):
         total = 0
         for item in self.text_list:
             if item is not None and 'text' in item:
-                text = item['text']
+                text = keyword_processor.replace_keywords(item['text'])
                 content = self.openAI(text, old_language, new_language)
                 total+=1
                 if(total% 5==0):
