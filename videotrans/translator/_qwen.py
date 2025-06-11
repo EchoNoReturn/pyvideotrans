@@ -77,25 +77,28 @@ class Qwen(BaseTrans):
                 keyword_processor.add_keyword(item['data'], '*' * len(item['data']))
 
         import re
-        srt_file_path = os.path.join(project_root, "apidata", uuid, "zh-cn.srt")
+        srt_file_path = os.path.join(project_root, "apidata", uuid)
+        srt_files = [os.path.join(srt_file_path, f) for f in os.listdir(srt_file_path) if f.endswith('.srt')]
         time_pattern = re.compile(r'^\d{2}:\d{2}:\d{2},\d{3} -->')
-        with open(srt_file_path, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-        new_lines = []
-        for line in lines:
-            line_strip = line.strip()
-            if line_strip.isdigit() or time_pattern.match(line_strip) or line_strip == '':
-                new_lines.append(line)
-            else:
-                try:
-                    line = keyword_processor.replace_keywords(line)
-                except Exception as e:
-                    import datetime
-                    print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}替换出错：{e}")
-                    raise Exception("替换出错，请检查输入")
-                new_lines.append(line)
-        with open(srt_file_path, 'w', encoding='utf-8') as f:
-            f.writelines(new_lines)
+        if srt_files is not None and len(srt_files) > 0:
+            for srt_file in srt_files:
+                with open(srt_file, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                new_lines = []
+                for line in lines:
+                    line_strip = line.strip()
+                    if line_strip.isdigit() or time_pattern.match(line_strip) or line_strip == '':
+                        new_lines.append(line)
+                    else:
+                        try:
+                            line = keyword_processor.replace_keywords(line)
+                        except Exception as e:
+                            import datetime
+                            print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}替换出错：{e}")
+                            raise Exception("替换出错，请检查输入")
+                        new_lines.append(line)
+                with open(srt_file, 'w', encoding='utf-8') as f:
+                    f.writelines(new_lines)
 
 
         file_path = os.path.join(project_root, "apidata", uuid)
