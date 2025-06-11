@@ -1,6 +1,6 @@
-from openai import OpenAI
-
+from openai import OpenAI,RateLimitError, APIError, Timeout
 from videotrans.translator._base import BaseTrans
+import time
 
 
 # local install openai SDK : pip install -U openai
@@ -26,29 +26,35 @@ class Qwen(BaseTrans):
         return language_map.get(language_code)
 
     @staticmethod
-    def openAI(content, old_language, new_language):
-        return OpenAI(
-            # https://bailian.console.aliyun.com/#/model-market/detail/qwen-mt-turbo
-            api_key='sk-212dfdbb67b349a281620667e9afdcd6',
-            base_url='https://dashscope.aliyuncs.com/compatible-mode/v1',
-        ).chat.completions.create(
-            # options: 
-            #       1、 qwen-mt-plus    如果您对翻译质量有较高要求，建议选择qwen-mt-plus模型；
-            #       2、 qwen-mt-turbo   如果您希望翻译速度更快或成本更低，建议选择qwen-mt-turbo模型。
-            model='qwen-mt-plus',
-            messages=[
-                {
-                    "role": "user",
-                    "content": content
-                }
-            ],
-            extra_body={
-                "translation_options": {
-                    "source_lang": old_language,
-                    "target_lang": new_language,
-                }
-            }
-        ).choices[0].message.content
+    def openAI(content, old_language, new_language, retries=5, delay=5):
+        for attempt in range(retries):
+            try:
+                response = OpenAI(
+                    api_key='sk-212dfdbb67b349a281620667e9afdcd6',
+                    base_url='https://dashscope.aliyuncs.com/compatible-mode/v1',
+                ).chat.completions.create(
+                    model='qwen-mt-plus',
+                    messages=[
+                        {"role": "user", "content": content}
+                    ],
+                    extra_body={
+                        "translation_options": {
+                            "source_lang": old_language,
+                            "target_lang": new_language,
+                        }
+                    }
+                )
+                return response.choices[0].message.content
+            except RateLimitError as e:
+                print(f"[重试] 第 {attempt+1}/{retries} 次请求过多：{e}，等待 {delay} 秒重试...")
+                time.sleep(delay)
+            except (APIError, Timeout) as e:
+                print(f"[重试] 第 {attempt+1}/{retries} 次 API 错误或超时：{e}，等待 {delay} 秒重试...")
+                time.sleep(delay)
+            except Exception as e:
+                print(f"[重试] 第 {attempt+1}/{retries} 次遇到未知错误：{e}，等待 {delay} 秒重试...")
+                time.sleep(delay)
+        raise Exception("超过最大重试次数，翻译失败")
 
     def run(self):
         print("千问AI翻译启动")
@@ -111,7 +117,7 @@ class Qwen(BaseTrans):
         for item in self.text_list:
             if item is not None and 'text' in item:
                 text = keyword_processor.replace_keywords(item['text'])
-                content = self.openAI(text, old_language, new_language)
+                content = keyword_processor.replace_keywords(self.openAI(text, old_language, new_language))
                 total+=1
                 if(total% 5==0):
                     import time
