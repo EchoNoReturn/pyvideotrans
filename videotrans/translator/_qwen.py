@@ -71,7 +71,7 @@ class Qwen(BaseTrans):
                 keyword_processor.add_keyword(item['data'], '*' * len(item['data']))
 
         import re
-        srt_file_path = os.path.join(project_root, "apidata", "zh-cn.srt")
+        srt_file_path = os.path.join(project_root, "apidata", uuid, "zh-cn.srt")
         time_pattern = re.compile(r'^\d{2}:\d{2}:\d{2},\d{3} -->')
         with open(srt_file_path, 'r', encoding='utf-8') as f:
             lines = f.readlines()
