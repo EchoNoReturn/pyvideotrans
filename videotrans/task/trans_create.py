@@ -231,7 +231,7 @@ class TransCreate(BaseTask):
 
     # （1）开始预处理
     def prepare(self) -> None:
-        self._saveStatus(self.cfg['record_id'], "VIDEO_STATUS_PROCEED_PRETREATMENT")
+        self._saveStatus(self.cfg["record_id"], "VIDEO_STATUS_PROCEED_PRETREATMENT")
         self._start_timer("预处理阶段")
         if self._exit():
             return
@@ -243,7 +243,9 @@ class TransCreate(BaseTask):
 
     # （2）开始语音识别
     def recogn(self) -> None:
-        self._saveStatus(self.cfg['record_id'], "VIDEO_STATUS_PROCEED_SPEECH_RECOGNITION")
+        self._saveStatus(
+            self.cfg["record_id"], "VIDEO_STATUS_PROCEED_SPEECH_RECOGNITION"
+        )
         self._start_timer("语音识别")
         if self._exit():
             return
@@ -434,7 +436,7 @@ class TransCreate(BaseTask):
 
     # （3）开始字幕翻译
     def trans(self) -> None:
-        self._saveStatus(self.cfg['record_id'], "VIDEO_STATUS_PROCEED_SUBTITLING")
+        self._saveStatus(self.cfg["record_id"], "VIDEO_STATUS_PROCEED_SUBTITLING")
         self._start_timer("字幕翻译")
         if self._exit():
             return
@@ -494,7 +496,7 @@ class TransCreate(BaseTask):
 
     # （4）开始配音
     def dubbing(self) -> None:
-        self._saveStatus(self.cfg['record_id'], "VIDEO_STATUS_PROCEED_DUB")
+        self._saveStatus(self.cfg["record_id"], "VIDEO_STATUS_PROCEED_DUB")
         self._start_timer("配音阶段")
         if self._exit():
             return
@@ -543,7 +545,9 @@ class TransCreate(BaseTask):
 
     # （5）开始视频合成
     def assembling(self) -> None:
-        self._saveStatus(self.cfg['record_id'], "VIDEO_STATUS_PROCEED_VIDEO_COMPOSITING")
+        self._saveStatus(
+            self.cfg["record_id"], "VIDEO_STATUS_PROCEED_VIDEO_COMPOSITING"
+        )
         self._start_timer("合成阶段")
         if self._exit():
             return
@@ -656,11 +660,6 @@ class TransCreate(BaseTask):
             raise e
 
         result_video_data = self._get_video_data(self.cfg["targetdir_mp4"])
-        # 入库
-        endpoint = "/py/video/modify"
-        headers = {
-            "Content-Type": "application/json",
-        }
         # 计算各阶段的执行时间和百分比
         total_time = sum(
             stage["duration"]
@@ -689,7 +688,6 @@ class TransCreate(BaseTask):
 
         # 将日志信息转化为字符串
         execution_logs_str = "\n".join(execution_logs)
-        print(f"id ==============> {self.cfg['record_id']}")
         task_id = self.cfg["task_id"]
         file_path = os.path.join(
             Path(__file__).resolve().parents[2], "apidata", task_id, task_id + ".json"
@@ -697,26 +695,29 @@ class TransCreate(BaseTask):
         translator_text = ""
         with open(file_path, "r", encoding="utf-8") as f:
             translator_text = json.loads(f.read())["text"]
-        # 构造请求参数
-        video_data = {
-            "id": self.cfg["record_id"],
-            "processStatus": "VIDEO_STATUS_SUCCEED",
-            "ossProcKey": object_key,
-            "procEndTime": int(time.time() * 1000),
-            "result": execution_logs_str,
-            "souDuration": round(sou_data["duration"], 2),
-            "souSize": round(sou_data["size"] / 1024 / 1024, 3),
-            "tarDuration": round(tar_data["duration"], 2),
-            "tarSize": round(tar_data["size"] / 1024 / 1024, 3),
-            "codec": sou_data["codec"],
-            "width": sou_data["width"],
-            "height": sou_data["height"],
-            "tarHashCode": hash_code,
-            "translateContent": translator_text,
-        }
-        # 发送请求
+
+        # 翻译完成信息入库
         response = http_request.send_request(
-            endpoint=endpoint, body=video_data, headers=headers
+            endpoint="/py/video/modify",
+            body={
+                "id": self.cfg["record_id"],
+                "processStatus": "VIDEO_STATUS_SUCCEED",
+                "ossProcKey": object_key,
+                "procEndTime": int(time.time() * 1000),
+                "result": execution_logs_str,
+                "souDuration": round(sou_data["duration"], 2),
+                "souSize": round(sou_data["size"] / 1024 / 1024, 3),
+                "tarDuration": round(tar_data["duration"], 2),
+                "tarSize": round(tar_data["size"] / 1024 / 1024, 3),
+                "codec": sou_data["codec"],
+                "width": sou_data["width"],
+                "height": sou_data["height"],
+                "tarHashCode": hash_code,
+                "translateContent": translator_text,
+            },
+            headers={
+                "Content-Type": "application/json",
+            },
         )
         if response["code"] != 0:
             print("视频信息记录出错")
@@ -1668,17 +1669,15 @@ class TransCreate(BaseTask):
 
     def _saveStatus(self, id, processStatus) -> None:
         resp = http_request.send_request(
-                endpoint="/py/video/updateStatus",
-                body={
-                    "id":id,
-                    "processStatus":processStatus
-                },
-                headers={
+            endpoint="/py/video/updateStatus",
+            body={"id": id, "processStatus": processStatus},
+            headers={
                 "Content-Type": "application/json",
-            }
+            },
         )
         if resp["code"] != 0:
             raise Exception("视频状态记录出错")
+
     # ffmpeg进度日志
     def _hebing_pro(self, protxt) -> None:
         basenum = 100 - self.precent
@@ -1717,7 +1716,8 @@ class TransCreate(BaseTask):
                         self.precent += 0.1
                     else:
                         self._signal(
-                            text=config.transobj["hebing"] + f" -> {precent * 100}%"
+                            text = config.transobj.get("hebing", "") + f" -> {precent * 100}%"
+
                         )
                     time.sleep(1)
 

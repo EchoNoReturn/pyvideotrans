@@ -486,7 +486,7 @@ if __name__ == "__main__":
             "refer_text": data.get("referText", ""),  # 参考文本
             # 其他
             "back_audio": "",
-            "is_separate": False,
+            "is_separate": True,
             "subtitles": "",
             "split_type": "all",
             "voice_rate": "+0%",
