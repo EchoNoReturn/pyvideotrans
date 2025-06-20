@@ -8,13 +8,12 @@ import textwrap
 import threading
 import time
 import uuid
-
 from fileHash import calculate_file_hash
-from pathlib import Path
 from typing import Dict
 from pydub import AudioSegment
-import requests
-from videotrans.task._remove_noise import remove_noise
+from pathlib import Path
+import datetime
+from flashtext import KeywordProcessor
 
 # from videotrans.task._m4a_to_wav import convert_m4a_to_wav
 from videotrans import translator
@@ -445,6 +444,39 @@ class TransCreate(BaseTask):
             return
         self.status_text = config.transobj["starttrans"]
 
+        keyword_processor = KeywordProcessor()
+        from videotrans.util.http_request import http_request
+        keyword_dict = http_request.send_request(endpoint="/py/keyword/all")
+        if keyword_dict['data'] is not None:
+            for item in keyword_dict['data']:
+                keyword_processor.add_keyword(item['data'], '*' * len(item['data']))
+        srt_file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                                     "apidata", self.uuid)
+        srt_files = [os.path.join(srt_file_path, f) for f in os.listdir(srt_file_path) if f.endswith('.srt')]
+        time_pattern = re.compile(r'^\d{2}:\d{2}:\d{2},\d{3} -->')
+        if srt_files is not None and len(srt_files) > 0:
+            for srt_file in srt_files:
+                with open(srt_file, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                new_lines = []
+                for line in lines:
+                    line_strip = line.strip()
+                    if line_strip.isdigit() or time_pattern.match(line_strip) or line_strip == '':
+                        new_lines.append(line)
+                    else:
+                        try:
+                            line = keyword_processor.replace_keywords(line)
+                        except Exception as e:
+                            print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}替换出错：{e}")
+                            # self._saveStatus(self.cfg["record_id"], "VIDEO_STATUS_FAILED")
+                            # self.get_new_task()
+                            raise Exception("替换出错，请检查输入")
+                        new_lines.append(line)
+                with open(srt_file, 'w', encoding='utf-8') as f:
+                    f.writelines(new_lines)
+        # todo 如果源语言是中文 需要在翻译前对源语言进行一个AI纠正
+        # if self.cfg["source_language_code"] == "zh-cn":
+        #     print("字幕进行AI纠正")
         # 如果存在目标语言字幕，前台直接使用该字幕替换
         if self._srt_vail(self.cfg["target_sub"]):
             print(f"已存在，不需要翻译==")
