@@ -404,6 +404,37 @@ class TransCreate(BaseTask):
                     self._save_srt_target(raw_subtitles, self.cfg["source_sub"])
                     self.source_srt_list = raw_subtitles
             # 标记识别完成
+            # 识别完成需要对字幕敏感词进行替换
+            print("==============================================>")
+            print(self.cfg)
+            keyword_processor = KeywordProcessor()
+            from videotrans.util.http_request import http_request
+            keyword_dict = http_request.send_request(endpoint="/py/keyword/all")
+            if keyword_dict['data'] is not None:
+                for item in keyword_dict['data']:
+                    keyword_processor.add_keyword(item['data'], '*' * len(item['data']))
+            srt_file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                                        "apidata", self.uuid)
+            srt_files = [os.path.join(srt_file_path, f) for f in os.listdir(srt_file_path) if f.endswith('.srt')]
+            time_pattern = re.compile(r'^\d{2}:\d{2}:\d{2},\d{3} -->')
+            if srt_files is not None and len(srt_files) > 0:
+                for srt_file in srt_files:
+                    with open(srt_file, 'r', encoding='utf-8') as f:
+                        lines = f.readlines()
+                    new_lines = []
+                    for line in lines:
+                        line_strip = line.strip()
+                        if line_strip.isdigit() or time_pattern.match(line_strip) or line_strip == '':
+                            new_lines.append(line)
+                        else:
+                            try:
+                                line = keyword_processor.replace_keywords(line)
+                            except Exception as e:
+                                print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}替换出错：{e}")
+                                raise Exception("替换出错，请检查输入")
+                            new_lines.append(line)
+                    with open(srt_file, 'w', encoding='utf-8') as f:
+                        f.writelines(new_lines)
             self._recogn_succeed()
         except Exception as e:
             msg = f"{str(e)}{str(e.args)}"
@@ -443,36 +474,6 @@ class TransCreate(BaseTask):
             return
         self.status_text = config.transobj["starttrans"]
 
-        keyword_processor = KeywordProcessor()
-        from videotrans.util.http_request import http_request
-        keyword_dict = http_request.send_request(endpoint="/py/keyword/all")
-        if keyword_dict['data'] is not None:
-            for item in keyword_dict['data']:
-                keyword_processor.add_keyword(item['data'], '*' * len(item['data']))
-        srt_file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-                                     "apidata", self.uuid)
-        srt_files = [os.path.join(srt_file_path, f) for f in os.listdir(srt_file_path) if f.endswith('.srt')]
-        time_pattern = re.compile(r'^\d{2}:\d{2}:\d{2},\d{3} -->')
-        if srt_files is not None and len(srt_files) > 0:
-            for srt_file in srt_files:
-                with open(srt_file, 'r', encoding='utf-8') as f:
-                    lines = f.readlines()
-                new_lines = []
-                for line in lines:
-                    line_strip = line.strip()
-                    if line_strip.isdigit() or time_pattern.match(line_strip) or line_strip == '':
-                        new_lines.append(line)
-                    else:
-                        try:
-                            line = keyword_processor.replace_keywords(line)
-                        except Exception as e:
-                            print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}替换出错：{e}")
-                            # self._saveStatus(self.cfg["record_id"], "VIDEO_STATUS_FAILED")
-                            # self.get_new_task()
-                            raise Exception("替换出错，请检查输入")
-                        new_lines.append(line)
-                with open(srt_file, 'w', encoding='utf-8') as f:
-                    f.writelines(new_lines)
         # todo 如果源语言是中文 需要在翻译前对源语言进行一个AI纠正
         # if self.cfg["source_language_code"] == "zh-cn":
         #     print("字幕进行AI纠正")
@@ -506,6 +507,8 @@ class TransCreate(BaseTask):
             else:
                 task_id = self.cfg["task_id"]
                 file_path = os.path.join(Path(__file__).resolve().parents[2], "apidata", task_id, task_id + ".json")
+                print("==========================================> file_path")
+                print(file_path)
                 os.makedirs(Path(file_path), exist_ok=True)
                 if not file_path.exists():
                     with open(file_path, 'w', encoding='utf-8') as f:
@@ -748,8 +751,24 @@ class TransCreate(BaseTask):
             Path(__file__).resolve().parents[2], "apidata", task_id, task_id + ".json"
         )
         translator_text = ""
-        with open(file_path, "r", encoding="utf-8") as f:
-            translator_text = json.loads(f.read())["text"]
+        if self.cfg["target_language_code"] != self.cfg["source_language_code"]:
+            with open(file_path, "r", encoding="utf-8") as f:
+                translator_text = json.loads(f.read())["text"]
+        else:
+            block = []
+            with open(self.cfg['source_sub'], 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if line == '':
+                        if len(block) >= 3:
+                            text_lines = block[2:]
+                            translator_text += '\n'.join(text_lines) + '\n\n'
+                        block = []
+                    else:
+                        block.append(line)
+            if len(block) >= 3:
+                text_lines = block[2:]
+                translator_text += '\n'.join(text_lines) + '\n\n'
 
         # 翻译完成信息入库
         response = http_request.send_request(
