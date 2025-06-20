@@ -502,7 +502,7 @@ class TransCreate(BaseTask):
                 target_code=self.cfg["target_language_code"],
             )
             # 不同语言才需要翻译
-            if target_srt["source_code"] != target_srt["target_code"]:
+            if self.cfg["source_language_code"] != self.cfg["target_language_code"]:
                 self._check_target_sub(rawsrt, target_srt)
             else:
                 task_id = self.cfg["task_id"]
