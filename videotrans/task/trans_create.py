@@ -274,7 +274,6 @@ class TransCreate(BaseTask):
         try:
             if not tools.vail_file(self.cfg["shibie_audio"]):
                 tools.conver_to_16k(self.cfg["source_wav"], self.cfg["shibie_audio"])
-            # todo
             if self.cfg["remove_noise"]:
                 self.status_text = (
                     "开始语音降噪处理，用时可能较久，请耐心等待"
@@ -504,6 +503,21 @@ class TransCreate(BaseTask):
             # 不同语言才需要翻译
             if target_srt["source_code"] != target_srt["target_code"]:
                 self._check_target_sub(rawsrt, target_srt)
+            else:
+                task_id = self.cfg["task_id"]
+                file_path = os.path.join(Path(__file__).resolve().parents[2], "apidata", task_id, task_id + ".json")
+                os.makedirs(Path(file_path), exist_ok=True)
+                if not file_path.exists():
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        json.dump({"text": "", "is_ok": False, "is_save": False}, f, ensure_ascii=False, indent=4)
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    data = json.loads(f.read())
+                    data['text'] = ""
+                for text in rawsrt:
+                    data['text'] = data['text'] + text + "\n"
+                data['is_ok'] = True
+                with open(Path(file_path), 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=4)
 
             # 仅提取，该名字删原
             if self.cfg["app_mode"] == "tiqu":
