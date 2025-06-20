@@ -501,8 +501,9 @@ class TransCreate(BaseTask):
                 source_code=self.cfg["source_language_code"],
                 target_code=self.cfg["target_language_code"],
             )
-            #
-            self._check_target_sub(rawsrt, target_srt)
+            # 不同语言才需要翻译
+            if target_srt["source_code"] != target_srt["target_code"]:
+                self._check_target_sub(rawsrt, target_srt)
 
             # 仅提取，该名字删原
             if self.cfg["app_mode"] == "tiqu":
