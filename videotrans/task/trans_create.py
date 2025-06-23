@@ -414,7 +414,7 @@ class TransCreate(BaseTask):
                 for item in keyword_dict['data']:
                     keyword_processor.add_keyword(item['data'], '*' * len(item['data']))
             srt_file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-                                        "apidata", self.uuid)
+                                         "apidata", self.uuid)
             srt_files = [os.path.join(srt_file_path, f) for f in os.listdir(srt_file_path) if f.endswith('.srt')]
             time_pattern = re.compile(r'^\d{2}:\d{2}:\d{2},\d{3} -->')
             if srt_files is not None and len(srt_files) > 0:
@@ -435,6 +435,19 @@ class TransCreate(BaseTask):
                             new_lines.append(line)
                     with open(srt_file, 'w', encoding='utf-8') as f:
                         f.writelines(new_lines)
+                # 敏感词替换后进行AI纠正
+                for srt_file in srt_files:
+                    if os.path.isfile(srt_file):
+                        with open(srt_file, 'r', encoding='utf-8') as f:
+                            text = f.read()
+                        from AI import ContentUpdate
+                        # Qwen
+                        new_text = ContentUpdate.qwen(text)
+
+                        # Deepseek
+                        # new_text = ContentUpdate.deepseek(text)
+                        with open(srt_file, 'w', encoding='utf-8') as f:
+                            f.write(new_text)
             self._recogn_succeed()
         except Exception as e:
             msg = f"{str(e)}{str(e.args)}"
@@ -474,9 +487,6 @@ class TransCreate(BaseTask):
             return
         self.status_text = config.transobj["starttrans"]
 
-        # todo 如果源语言是中文 需要在翻译前对源语言进行一个AI纠正
-        # if self.cfg["source_language_code"] == "zh-cn":
-        #     print("字幕进行AI纠正")
         # 如果存在目标语言字幕，前台直接使用该字幕替换
         if self._srt_vail(self.cfg["target_sub"]):
             print(f"已存在，不需要翻译==")
