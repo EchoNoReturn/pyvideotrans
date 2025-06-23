@@ -229,15 +229,20 @@ class TransCreate(BaseTask):
 
     # （1）开始预处理
     def prepare(self) -> None:
-        self._saveStatus(self.cfg["record_id"], "VIDEO_STATUS_PROCEED_PRETREATMENT")
-        self._start_timer("预处理阶段")
-        if self._exit():
-            return
-        # 将原始视频分离为无声视频和音频
-        self._split_wav_novicemp4()
-        # 记录原视频信息
-        self.cfg["origin_video_data"] = self._get_video_data(self.cfg["name"])
-        self._end_timer("预处理阶段")
+        try:
+            self._saveStatus(self.cfg["record_id"], "VIDEO_STATUS_PROCEED_PRETREATMENT")
+            self._start_timer("预处理阶段")
+            if self._exit():
+                return
+            # 将原始视频分离为无声视频和音频
+            self._split_wav_novicemp4()
+            # 记录原视频信息
+            self.cfg["origin_video_data"] = self._get_video_data(self.cfg["name"])
+            self._end_timer("预处理阶段")
+        except Exception as e:
+            print("预处理出错...")
+            self._saveStatus(self.cfg["record_id"], "VIDEO_STATUS_FAILED")
+            self.get_new_task()
 
     # （2）开始语音识别
     def recogn(self) -> None:
