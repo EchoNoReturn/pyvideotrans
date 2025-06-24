@@ -139,8 +139,8 @@ class TransCreate(BaseTask):
             vcodec_name = "h264" if self.video_codec_num == 264 else "hevc"
             # 如果获得原始视频编码格式同需要输出编码格式一致，设 is_copy_video=True
             if (
-                    self.video_info["video_codec_name"] == vcodec_name
-                    and self.video_info["color"] == "yuv420p"
+                self.video_info["video_codec_name"] == vcodec_name
+                and self.video_info["color"] == "yuv420p"
             ):
                 self.is_copy_video = True
 
@@ -162,15 +162,15 @@ class TransCreate(BaseTask):
 
         # 如果配音角色不是No 并且不存在目标音频，则需要配音
         if (
-                self.cfg["voice_role"]
-                and self.cfg["voice_role"] not in ["No", "", " "]
-                and self.cfg["target_language"] not in ["No", "-"]
+            self.cfg["voice_role"]
+            and self.cfg["voice_role"] not in ["No", "", " "]
+            and self.cfg["target_language"] not in ["No", "-"]
         ):
             self.shoud_dubbing = True
 
         # 如果不是tiqu，则均需要合并
         if self.cfg["app_mode"] != "tiqu" and (
-                self.shoud_dubbing or self.cfg["subtitle_type"] > 0
+            self.shoud_dubbing or self.cfg["subtitle_type"] > 0
         ):
             self.shoud_hebing = True
 
@@ -315,10 +315,10 @@ class TransCreate(BaseTask):
                     ]
                 )
                 txt_file = (
-                        Path(
-                            config.settings.get("Faster_Whisper_XXL", "")
-                        ).parent.as_posix()
-                        + "/pyvideotrans.txt"
+                    Path(
+                        config.settings.get("Faster_Whisper_XXL", "")
+                    ).parent.as_posix()
+                    + "/pyvideotrans.txt"
                 )
                 if Path(txt_file).exists():
                     cmd.extend(
@@ -331,10 +331,10 @@ class TransCreate(BaseTask):
                 subprocess.run(cmd)
                 # 定义输出的字幕文件路径
                 outsrt_file = (
-                        self.cfg["target_dir"]
-                        + "/"
-                        + Path(self.cfg["shibie_audio"]).stem
-                        + ".srt"
+                    self.cfg["target_dir"]
+                    + "/"
+                    + Path(self.cfg["shibie_audio"]).stem
+                    + ".srt"
                 )
                 # 如果输出的字幕文件路径与源字幕路径不同，则复制到源字幕路径并删除原文件
                 if outsrt_file != self.cfg["source_sub"]:
@@ -414,46 +414,62 @@ class TransCreate(BaseTask):
             print(self.cfg)
             keyword_processor = KeywordProcessor()
             from videotrans.util.http_request import http_request
+
             keyword_dict = http_request.send_request(endpoint="/py/keyword/all")
-            if keyword_dict['data'] is not None:
-                for item in keyword_dict['data']:
-                    keyword_processor.add_keyword(item['data'], '*' * len(item['data']))
-            srt_file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-                                         "apidata", self.uuid)
-            srt_files = [os.path.join(srt_file_path, f) for f in os.listdir(srt_file_path) if f.endswith('.srt')]
-            time_pattern = re.compile(r'^\d{2}:\d{2}:\d{2},\d{3} -->')
+            if keyword_dict["data"] is not None:
+                for item in keyword_dict["data"]:
+                    keyword_processor.add_keyword(item["data"], "*" * len(item["data"]))
+            srt_file_path = os.path.join(
+                os.path.dirname(
+                    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                ),
+                "apidata",
+                self.uuid,
+            )
+            srt_files = [
+                os.path.join(srt_file_path, f)
+                for f in os.listdir(srt_file_path)
+                if f.endswith(".srt")
+            ]
+            time_pattern = re.compile(r"^\d{2}:\d{2}:\d{2},\d{3} -->")
             if srt_files is not None and len(srt_files) > 0:
                 for srt_file in srt_files:
-                    with open(srt_file, 'r', encoding='utf-8') as f:
+                    with open(srt_file, "r", encoding="utf-8") as f:
                         lines = f.readlines()
                     new_lines = []
                     for line in lines:
                         line_strip = line.strip()
-                        if line_strip.isdigit() or time_pattern.match(line_strip) or line_strip == '':
+                        if (
+                            line_strip.isdigit()
+                            or time_pattern.match(line_strip)
+                            or line_strip == ""
+                        ):
                             new_lines.append(line)
                         else:
                             try:
                                 line = keyword_processor.replace_keywords(line)
                             except Exception as e:
-                                print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}替换出错：{e}")
+                                print(
+                                    f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}替换出错：{e}"
+                                )
                                 raise Exception("替换出错，请检查输入")
                             new_lines.append(line)
-                    with open(srt_file, 'w', encoding='utf-8') as f:
+                    with open(srt_file, "w", encoding="utf-8") as f:
                         f.writelines(new_lines)
                 # 敏感词替换后进行AI纠正
-                if self.cfg['source_language'] == 'zh-cn':
-                    for srt_file in srt_files:
-                        if os.path.isfile(srt_file):
-                            with open(srt_file, 'r', encoding='utf-8') as f:
-                                text = f.read()
-                            from AI import ContentUpdate
-                            # Qwen
-                            new_text = ContentUpdate.qwen(text)
+                # if self.cfg['source_language'] == 'zh-cn':
+                #     for srt_file in srt_files:
+                #         if os.path.isfile(srt_file):
+                #             with open(srt_file, 'r', encoding='utf-8') as f:
+                #                 text = f.read()
+                #             from AI import ContentUpdate
+                #             # Qwen
+                #             new_text = ContentUpdate.qwen(text)
 
-                            # Deepseek
-                            # new_text = ContentUpdate.deepseek(text)
-                            with open(srt_file, 'w', encoding='utf-8') as f:
-                                f.write(new_text)
+                #             # Deepseek
+                #             # new_text = ContentUpdate.deepseek(text)
+                #             with open(srt_file, 'w', encoding='utf-8') as f:
+                #                 f.write(new_text)
             self._recogn_succeed()
         except Exception as e:
             msg = f"{str(e)}{str(e.args)}"
@@ -522,20 +538,30 @@ class TransCreate(BaseTask):
                 self._check_target_sub(rawsrt, target_srt)
             else:
                 task_id = self.cfg["task_id"]
-                file_path = os.path.join(Path(__file__).resolve().parents[2], "apidata", task_id, task_id + ".json")
+                file_path = os.path.join(
+                    Path(__file__).resolve().parents[2],
+                    "apidata",
+                    task_id,
+                    task_id + ".json",
+                )
                 print("==========================================> file_path")
                 print(file_path)
                 os.makedirs(Path(file_path), exist_ok=True)
                 if not file_path.exists():
-                    with open(file_path, 'w', encoding='utf-8') as f:
-                        json.dump({"text": "", "is_ok": False, "is_save": False}, f, ensure_ascii=False, indent=4)
-                with open(file_path, 'r', encoding='utf-8') as f:
+                    with open(file_path, "w", encoding="utf-8") as f:
+                        json.dump(
+                            {"text": "", "is_ok": False, "is_save": False},
+                            f,
+                            ensure_ascii=False,
+                            indent=4,
+                        )
+                with open(file_path, "r", encoding="utf-8") as f:
                     data = json.loads(f.read())
-                    data['text'] = ""
+                    data["text"] = ""
                 for text in rawsrt:
-                    data['text'] = data['text'] + text + "\n"
-                data['is_ok'] = True
-                with open(Path(file_path), 'w', encoding='utf-8') as f:
+                    data["text"] = data["text"] + text + "\n"
+                data["is_ok"] = True
+                with open(Path(file_path), "w", encoding="utf-8") as f:
                     json.dump(data, f, ensure_ascii=False, indent=4)
 
             # 仅提取，该名字删原
@@ -579,16 +605,16 @@ class TransCreate(BaseTask):
         self.precent += 3
         try:
             if (
-                    self.cfg["voice_role"] == "clone"
-                    and self.cfg["tts_type"] == ELEVENLABS_TTS
+                self.cfg["voice_role"] == "clone"
+                and self.cfg["tts_type"] == ELEVENLABS_TTS
             ):
                 if (
-                        self.cfg["source_language_code"] != "auto"
-                        # zh-cn -> zh
-                        and self.cfg["source_language_code"][:2]
-                        not in config.ELEVENLABS_CLONE
+                    self.cfg["source_language_code"] != "auto"
+                    # zh-cn -> zh
+                    and self.cfg["source_language_code"][:2]
+                    not in config.ELEVENLABS_CLONE
                 ) or (
-                        self.cfg["target_language_code"][:2] not in config.ELEVENLABS_CLONE
+                    self.cfg["target_language_code"][:2] not in config.ELEVENLABS_CLONE
                 ):
                     self.hasend = True
                     raise Exception(
@@ -772,19 +798,19 @@ class TransCreate(BaseTask):
                 translator_text = json.loads(f.read())["text"]
         else:
             block = []
-            with open(self.cfg['source_sub'], 'r', encoding='utf-8') as f:
+            with open(self.cfg["source_sub"], "r", encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
-                    if line == '':
+                    if line == "":
                         if len(block) >= 3:
                             text_lines = block[2:]
-                            translator_text += '\n'.join(text_lines) + '\n\n'
+                            translator_text += "\n".join(text_lines) + "\n\n"
                         block = []
                     else:
                         block.append(line)
             if len(block) >= 3:
                 text_lines = block[2:]
-                translator_text += '\n'.join(text_lines) + '\n\n'
+                translator_text += "\n".join(text_lines) + "\n\n"
 
         # 翻译完成信息入库
         response = http_request.send_request(
@@ -815,8 +841,9 @@ class TransCreate(BaseTask):
 
     def get_new_task(self):
         from .WebSocketClient import WebSocketClient
+
         java_config_file_path = (
-                Path(__file__).resolve().parents[1] / "util" / "config.json"
+            Path(__file__).resolve().parents[1] / "util" / "config.json"
         )
         print(java_config_file_path)
         with open(java_config_file_path, "r", encoding="utf-8") as f:
@@ -859,8 +886,8 @@ class TransCreate(BaseTask):
         )
 
         if (
-                self.cfg["source_language_code"] != "auto"
-                and Path(f"{self.cfg['cache_folder']}/auto.m4a").exists()
+            self.cfg["source_language_code"] != "auto"
+            and Path(f"{self.cfg['cache_folder']}/auto.m4a").exists()
         ):
             Path(f"{self.cfg['cache_folder']}/auto.m4a").rename(self.cfg["source_wav"])
         # 是否需要语音识别:只要不存在原始语言字幕文件就需要识别
@@ -890,15 +917,15 @@ class TransCreate(BaseTask):
 
         # 是否需要翻译:存在目标语言代码并且不等于原始语言，并且不存在目标字幕文件，则需要翻译
         if (
-                self.cfg["target_language_code"]
-                and self.cfg["target_language_code"] != self.cfg["source_language_code"]
+            self.cfg["target_language_code"]
+            and self.cfg["target_language_code"] != self.cfg["source_language_code"]
         ):
             self.shoud_trans = True
 
         # 如果原语言和目标语言相等，并且存在配音角色，则替换配音
         if (
-                self.cfg["voice_role"] != "No"
-                and self.cfg["source_language_code"] == self.cfg["target_language_code"]
+            self.cfg["voice_role"] != "No"
+            and self.cfg["source_language_code"] == self.cfg["target_language_code"]
         ):
             self.cfg["target_wav_output"] = (
                 f"{self.cfg['target_dir']}/{self.cfg['target_language_code']}-dubbing.m4a"
@@ -1062,15 +1089,15 @@ class TransCreate(BaseTask):
                 "pitch": self.cfg["pitch"],
                 "tts_type": self.cfg["tts_type"],
                 "filename": config.TEMP_DIR
-                            + f"/dubbing_cache/{it['start_time']}-{it['end_time']}-{time.time()}-{len(it['text'])}-{i}.mp3",
+                + f"/dubbing_cache/{it['start_time']}-{it['end_time']}-{time.time()}-{len(it['text'])}-{i}.mp3",
             }
             if voice_role == "clone-single":
                 tmp_dict["ref_text"] = self.cfg["refer_text"]
             # 如果是clone-voice类型， 需要截取对应片段
             if (
-                    self.cfg["tts_type"]
-                    in [COSYVOICE_TTS, CLONE_VOICE_TTS, F5_TTS, SPARK_TTS, INDEX_TTS]
-                    and voice_role == "clone"
+                self.cfg["tts_type"]
+                in [COSYVOICE_TTS, CLONE_VOICE_TTS, F5_TTS, SPARK_TTS, INDEX_TTS]
+                and voice_role == "clone"
             ):
                 if self.cfg["is_separate"] and not tools.vail_file(self.cfg["vocal"]):
                     raise Exception(
@@ -1081,8 +1108,8 @@ class TransCreate(BaseTask):
 
                 if tools.vail_file(self.cfg["source_wav"]):
                     tmp_dict["ref_wav"] = (
-                            config.TEMP_DIR
-                            + f"/dubbing_cache/{it['start_time']}-{it['end_time']}-{time.time()}-{i}.wav"
+                        config.TEMP_DIR
+                        + f"/dubbing_cache/{it['start_time']}-{it['end_time']}-{time.time()}-{i}.wav"
                     )
                     if voice_role == "clone":
                         tools.cut_from_audio(
@@ -1177,8 +1204,8 @@ class TransCreate(BaseTask):
             )
         try:
             shoud_video_rate = (
-                    self.cfg["video_autorate"]
-                    and int(float(config.settings["video_rate"])) > 1
+                self.cfg["video_autorate"]
+                and int(float(config.settings["video_rate"])) > 1
             )
             # 如果时需要慢速或者需要末尾延长视频，需等待 novoice_mp4 分离完毕
             if shoud_video_rate or self.cfg["append_video"]:
@@ -1187,7 +1214,7 @@ class TransCreate(BaseTask):
                 queue_tts=self.queue_tts,
                 uuid=self.uuid,
                 shoud_audiorate=self.cfg["voice_autorate"]
-                                and int(float(config.settings["audio_rate"])) > 1,
+                and int(float(config.settings["audio_rate"])) > 1,
                 # 视频是否需慢速，需要时对 novoice_mp4进行处理
                 shoud_videorate=shoud_video_rate,
                 novoice_mp4=self.cfg["novoice_mp4"],
@@ -1220,16 +1247,16 @@ class TransCreate(BaseTask):
 
         # 成功后，如果存在 音量，则调节音量
         if (
-                self.cfg["tts_type"] not in [EDGE_TTS, AZURE_TTS]
-                and self.cfg["volume"] != "+0%"
-                and tools.vail_file(self.cfg["target_wav"])
+            self.cfg["tts_type"] not in [EDGE_TTS, AZURE_TTS]
+            and self.cfg["volume"] != "+0%"
+            and tools.vail_file(self.cfg["target_wav"])
         ):
             volume = self.cfg["volume"].replace("%", "").strip()
             try:
                 volume = 1 + float(volume) / 100
                 tmp_name = (
-                        self.cfg["cache_folder"]
-                        + f'/volume-{volume}-{Path(self.cfg["target_wav"]).name}'
+                    self.cfg["cache_folder"]
+                    + f'/volume-{volume}-{Path(self.cfg["target_wav"]).name}'
                 )
                 tools.runffmpeg(
                     [
@@ -1252,7 +1279,7 @@ class TransCreate(BaseTask):
             return
 
         if tools.vail_file(self.cfg["target_wav"]) and tools.vail_file(
-                self.cfg["background_music"]
+            self.cfg["background_music"]
         ):
             try:
                 self.status_text = (
@@ -1276,9 +1303,9 @@ class TransCreate(BaseTask):
 
                 beishu = math.ceil(vtime / atime)
                 if (
-                        config.settings["loop_backaudio"]
-                        and beishu > 1
-                        and vtime - 1 > atime
+                    config.settings["loop_backaudio"]
+                    and beishu > 1
+                    and vtime - 1 > atime
                 ):
                     # 获取延长片段
                     file_list = [
@@ -1291,7 +1318,7 @@ class TransCreate(BaseTask):
                         out=self.cfg["cache_folder"] + "/bgm_file_extend.m4a",
                     )
                     self.cfg["background_music"] = (
-                            self.cfg["cache_folder"] + "/bgm_file_extend.m4a"
+                        self.cfg["cache_folder"] + "/bgm_file_extend.m4a"
                     )
                 # 背景音频降低音量
                 tools.runffmpeg(
@@ -1356,7 +1383,7 @@ class TransCreate(BaseTask):
                         out=self.cfg["cache_folder"] + "/instrument-concat.m4a",
                     )
                     self.cfg["instrument"] = (
-                            self.cfg["cache_folder"] + f"/instrument-concat.m4a"
+                        self.cfg["cache_folder"] + f"/instrument-concat.m4a"
                     )
                 # 背景音合并配音
                 tools.backandvocal(self.cfg["instrument"], self.cfg["target_wav"])
@@ -1407,7 +1434,7 @@ class TransCreate(BaseTask):
 
         # 如果原始语言和目标语言相同，或不存原始语言字幕，则强制单字幕
         if (self.cfg["source_language_code"] == self.cfg["target_language_code"]) or (
-                not self.cfg["source_sub"] or not Path(self.cfg["source_sub"]).exists()
+            not self.cfg["source_sub"] or not Path(self.cfg["source_sub"]).exists()
         ):
             if self.cfg["subtitle_type"] == 3:
                 self.cfg["subtitle_type"] = 1
@@ -1429,8 +1456,8 @@ class TransCreate(BaseTask):
         target_sub_list = tools.get_subtitle_from_srt(self.cfg["target_sub"])
 
         if (
-                self.cfg["subtitle_type"] in [3, 4]
-                and not Path(self.cfg["source_sub"]).exists()
+            self.cfg["subtitle_type"] in [3, 4]
+            and not Path(self.cfg["source_sub"]).exists()
         ):
             config.logger.info(f"无源语言字幕，使用目标语言字幕")
             self.cfg["subtitle_type"] = 1 if self.cfg["subtitle_type"] == 3 else 2
@@ -1586,6 +1613,65 @@ class TransCreate(BaseTask):
                 f"{config.transobj['Dubbing']}{config.transobj['anerror']}:{self.cfg['target_wav']}"
             )
 
+        # 字幕重新分割
+        if self.cfg["subtitle_type"] > 0:
+            # 读取原始字幕文件
+            subs = tools.get_subtitle_from_srt(self.cfg["target_sub"])
+            # 分割过长的字幕
+            new_subs = []
+            for sub in subs:
+                duration = sub["end_time"] - sub["start_time"]
+                text = sub["text"]
+                # 如果字幕持续时间超过10秒或字符数超过40，则进行分割
+                if duration > 10000 or len(text) > 40:
+                    # 计算分割段数
+                    segments = max(2, math.ceil(duration / 5000))
+                    # 按标点符号分割文本
+                    sentences = re.split(r"(?<=[,.!?;:，。！？；：])", text)
+                    if len(sentences) < 2:
+                        # 如果没有标点符号，则按字数均分
+                        words = text.split()
+                        seg_word_count = max(1, len(words) // segments)
+                        sentences = [
+                            " ".join(words[i : i + seg_word_count])
+                            for i in range(0, len(words), seg_word_count)
+                        ]
+                    # 创建分割后的字幕段
+                    seg_duration = duration / len(sentences)
+                    for i, sentence in enumerate(sentences):
+                        if not sentence.strip():
+                            continue
+                        new_sub = copy.deepcopy(sub)
+                        new_sub["start_time"] = sub["start_time"] + i * seg_duration
+                        new_sub["end_time"] = min(
+                            sub["end_time"], sub["start_time"] + (i + 1) * seg_duration
+                        )
+                        new_sub["text"] = sentence.strip()
+                        new_subs.append(new_sub)
+                else:
+                    new_subs.append(sub)
+                # 打印最终所有字幕
+                config.logger.info("\n==== 最终字幕 ====")
+                srt_logs = []
+                for i, sub in enumerate(new_subs, 1):
+                    srt_logs.append(
+                        f"[{i}] {tools.ms_to_time_string(ms=sub['start_time'])} --> "
+                        f"{tools.ms_to_time_string(ms=sub['end_time'])}\n"
+                        f"{sub['text']}\n"
+                    )
+                config.logger.info("\n".join(srt_logs))
+
+            # 保存分割后的字幕文件
+            if len(new_subs) > len(subs):
+                srt_content = ""
+                for i, sub in enumerate(new_subs):
+                    srt_content += f"{i+1}\n"
+                    srt_content += f"{tools.ms_to_time_string(ms=sub['start_time'])} --> {tools.ms_to_time_string(ms=sub['end_time'])}\n"
+                    srt_content += f"{sub['text']}\n\n"
+                with open(self.cfg["target_sub"], "w", encoding="utf-8") as f:
+                    f.write(srt_content.strip())
+
+        # 字幕大小调整
         subtitles_file, subtitle_langcode = None, None
         if self.cfg["subtitle_type"] > 0:
             subtitles_file, subtitle_langcode = self._process_subtitles()
@@ -1807,8 +1893,8 @@ class TransCreate(BaseTask):
                         self.precent += 0.1
                     else:
                         self._signal(
-                            text=config.transobj.get("hebing", "") + f" -> {precent * 100}%"
-
+                            text=config.transobj.get("hebing", "")
+                            + f" -> {precent * 100}%"
                         )
                     time.sleep(1)
 
@@ -1818,11 +1904,11 @@ class TransCreate(BaseTask):
             # Path(self.cfg['novoice_mp4']).unlink(missing_ok=True)
             if not self.cfg["only_video"]:
                 with open(
-                        self.cfg["target_dir"]
-                        + f'/{"readme" if config.defaulelang != "zh" else "文件说明"}.txt',
-                        "w",
-                        encoding="utf-8",
-                        errors="ignore",
+                    self.cfg["target_dir"]
+                    + f'/{"readme" if config.defaulelang != "zh" else "文件说明"}.txt',
+                    "w",
+                    encoding="utf-8",
+                    errors="ignore",
                 ) as f:
                     f.write(
                         f"""以下是可能生成的全部文件, 根据执行时配置的选项不同, 某些文件可能不会生成, 之所以生成这些文件和素材，是为了方便有需要的用户, 进一步使用其他软件进行处理, 而不必再进行语音导出、音视频分离、字幕识别等重复工作
@@ -1880,8 +1966,8 @@ class TransCreate(BaseTask):
         if stage in self.execution_times:
             self.execution_times[stage]["end"] = time.time()
             self.execution_times[stage]["duration"] = (
-                    self.execution_times[stage]["end"]
-                    - self.execution_times[stage]["start"]
+                self.execution_times[stage]["end"]
+                - self.execution_times[stage]["start"]
             )
 
     # 获取视频元信息
