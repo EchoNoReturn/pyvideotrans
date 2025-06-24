@@ -254,7 +254,7 @@ def parse_init():
         "lang": "",
         "is_queue": False,
         "Faster_Whisper_XXL": "",
-        "crf": 0,  # value default 23
+        "crf": 23,
         "cuda_qp": False,
         "cuda_decode": False,
         "videoslow_hard": True,
