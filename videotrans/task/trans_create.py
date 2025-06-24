@@ -441,18 +441,19 @@ class TransCreate(BaseTask):
                     with open(srt_file, 'w', encoding='utf-8') as f:
                         f.writelines(new_lines)
                 # 敏感词替换后进行AI纠正
-                for srt_file in srt_files:
-                    if os.path.isfile(srt_file):
-                        with open(srt_file, 'r', encoding='utf-8') as f:
-                            text = f.read()
-                        from AI import ContentUpdate
-                        # Qwen
-                        new_text = ContentUpdate.qwen(text)
+                if self.cfg['source_language'] == 'zh-cn':
+                    for srt_file in srt_files:
+                        if os.path.isfile(srt_file):
+                            with open(srt_file, 'r', encoding='utf-8') as f:
+                                text = f.read()
+                            from AI import ContentUpdate
+                            # Qwen
+                            new_text = ContentUpdate.qwen(text)
 
-                        # Deepseek
-                        # new_text = ContentUpdate.deepseek(text)
-                        with open(srt_file, 'w', encoding='utf-8') as f:
-                            f.write(new_text)
+                            # Deepseek
+                            # new_text = ContentUpdate.deepseek(text)
+                            with open(srt_file, 'w', encoding='utf-8') as f:
+                                f.write(new_text)
             self._recogn_succeed()
         except Exception as e:
             msg = f"{str(e)}{str(e.args)}"
