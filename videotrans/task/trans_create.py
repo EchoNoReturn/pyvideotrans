@@ -458,24 +458,24 @@ class TransCreate(BaseTask):
                         f.writelines(new_lines)
                 # 敏感词替换后进行AI纠正
                 if self.cfg['source_language'] == 'zh-cn':
+                    from AI import ContentUpdate
+                    batch_size = 400
                     for srt_file in srt_files:
                         if os.path.isfile(srt_file):
                             with open(srt_file, 'r', encoding='utf-8') as f:
-                                text = f.read()
-                            try:
-                                from AI import ContentUpdate
-                            # Qwen
-                            # new_text = ContentUpdate.qwen(text)
-                            # Deepseek 70b
-                            # new_text = ContentUpdate.deepseek(text)
-                            # Deepseek api
-                                new_text = ContentUpdate.deepseek_api(text)
-                                with open(srt_file, 'w', encoding='utf-8') as f:
-                                    f.write(new_text)
-                            except Exception as e:
-                                print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}======> AI纠正出错 ======>{e}")
-                                with open(srt_file, 'w', encoding='utf-8') as f:
-                                    f.write(text)
+                                lines = f.readlines()
+                            content_list = []
+                            for i in range(0, len(lines), batch_size):
+                                batch = lines[i:i + batch_size]
+                                text = ''.join(batch)
+                                try:
+                                    new_text = ContentUpdate.deepseek_api(text)
+                                    content_list.append(new_text)
+                                except Exception as e:
+                                    print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}===> AI纠正出错 ===>{e}")
+                                    content_list.append(text)
+                            with open(srt_file, 'w', encoding='utf-8') as f:
+                                f.write(''.join(content_list))
             self._recogn_succeed()
         except Exception as e:
             msg = f"{str(e)}{str(e.args)}"
