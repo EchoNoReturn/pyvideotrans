@@ -475,7 +475,7 @@ class TransCreate(BaseTask):
                                     print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}===> AI纠正出错 ===>{e}")
                                     content_list.append(text)
                             with open(srt_file, 'w', encoding='utf-8') as f:
-                                f.write(''.join(content_list))
+                                f.write('\n'.join(content_list))
             self._recogn_succeed()
         except Exception as e:
             msg = f"{str(e)}{str(e.args)}"
