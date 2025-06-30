@@ -30,7 +30,7 @@ class Qwen(BaseTrans):
         for attempt in range(retries):
             try:
                 response = OpenAI(
-                    api_key='sk-212dfdbb67b349a281620667e9afdcd6',
+                    api_key='sk-4de2c78f40724cbfa57a5ffeb5c55237',
                     base_url='https://dashscope.aliyuncs.com/compatible-mode/v1',
                 ).chat.completions.create(
                     model='qwen-mt-plus',
@@ -45,12 +45,6 @@ class Qwen(BaseTrans):
                     }
                 )
                 return response.choices[0].message.content
-            except RateLimitError as e:
-                print(f"[重试] 第 {attempt+1}/{retries} 次请求过多：{e}，等待 {delay} 秒重试...")
-                time.sleep(delay)
-            except (APIError, Timeout) as e:
-                print(f"[重试] 第 {attempt+1}/{retries} 次 API 错误或超时：{e}，等待 {delay} 秒重试...")
-                time.sleep(delay)
             except Exception as e:
                 print(f"[重试] 第 {attempt+1}/{retries} 次遇到未知错误：{e}，等待 {delay} 秒重试...")
                 time.sleep(delay)
@@ -58,6 +52,8 @@ class Qwen(BaseTrans):
 
     def run(self):
         print("千问AI翻译启动")
+        print(self.text_list)
+        print("============================> ")
         if self.source_code == "auto":
             raise Exception("该翻译引擎不支持自动识别")
         import os
@@ -122,6 +118,7 @@ class Qwen(BaseTrans):
                 text = keyword_processor.replace_keywords(item['text'])
                 content = keyword_processor.replace_keywords(self.openAI(text, old_language, new_language))
                 total+=1
+                print(f"第 {total}翻译 =============> {content}")
                 if(total% 5==0):
                     import time
                     time.sleep(1)
