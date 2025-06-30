@@ -1,6 +1,8 @@
-from openai import OpenAI,RateLimitError, APIError, Timeout
+from openai import OpenAI, RateLimitError, APIError, Timeout
 from videotrans.translator._base import BaseTrans
 import time
+import re
+import requests
 
 
 # local install openai SDK : pip install -U openai
@@ -26,6 +28,16 @@ class Qwen(BaseTrans):
         return language_map.get(language_code)
 
     @staticmethod
+    def map_language_google(language_code):
+        language_map = {
+            "Chinese": "zh-CN",
+            "English": "en",
+            "Japanese": "ja",
+            "Korean": "ko"
+        }
+        return language_map.get(language_code)
+
+    @staticmethod
     def openAI(content, old_language, new_language, retries=5, delay=5):
         for attempt in range(retries):
             try:
@@ -46,7 +58,18 @@ class Qwen(BaseTrans):
                 )
                 return response.choices[0].message.content
             except Exception as e:
-                print(f"[重试] 第 {attempt+1}/{retries} 次遇到未知错误：{e}，等待 {delay} 秒重试...")
+                print(f"[重试] 第 {attempt + 1}/{retries} 次遇到未知错误：{e}，等待 {delay} 秒重试...")
+                if 'Input data may contain inappropriate content' in str(e):
+                    print("Google Translator ===============================> ")
+                    url = f"https://translate.google.com/m?tl={Qwen.map_language_google(new_language)}&sl={Qwen.map_language_google(old_language)}&q={content}"
+                    headers = {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36'
+                    }
+                    response = requests.get(url=url, headers=headers, timeout=300, verify=False)
+                    if response.status_code == 200:
+                        match = re.search(r'<div class="result-container">(.*?)</div>', response.text)
+                        if match:
+                            return match.group(1)
                 time.sleep(delay)
         raise Exception("超过最大重试次数，翻译失败")
 
@@ -96,18 +119,17 @@ class Qwen(BaseTrans):
                 with open(srt_file, 'w', encoding='utf-8') as f:
                     f.writelines(new_lines)
 
-
         file_path = os.path.join(project_root, "apidata", uuid)
-        file_name = uuid+".json"
+        file_name = uuid + ".json"
 
-        path = Path(file_path)/file_name
+        path = Path(file_path) / file_name
 
         os.makedirs(Path(file_path), exist_ok=True)
         if not path.exists():
             with open(path, 'w', encoding='utf-8') as f:
-                json.dump({"text": "","is_ok":False,"is_save":False}, f, ensure_ascii=False, indent=4)
+                json.dump({"text": "", "is_ok": False, "is_save": False}, f, ensure_ascii=False, indent=4)
 
-        with open(path,'r',encoding='utf-8') as f:
+        with open(path, 'r', encoding='utf-8') as f:
             data = json.loads(f.read())
             data['text'] = ""
         new_language = self.map_language(self.target_code)  # 目标语言
@@ -117,17 +139,16 @@ class Qwen(BaseTrans):
             if item is not None and 'text' in item:
                 text = keyword_processor.replace_keywords(item['text'])
                 content = keyword_processor.replace_keywords(self.openAI(text, old_language, new_language))
-                total+=1
+                total += 1
                 print(f"第 {total}翻译 =============> {content}")
-                if(total% 5==0):
+                if (total % 5 == 0):
                     import time
                     time.sleep(1)
-                data['text'] = data['text'] + text+ "\n" + content + "\n"
-                with open(Path(path),'w',encoding='utf-8') as f:
-                    json.dump(data,f,ensure_ascii=False,indent=4)
+                data['text'] = data['text'] + text + "\n" + content + "\n"
+                with open(Path(path), 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=4)
                 item['text'] = content
         data['is_ok'] = True
-        with open(Path(path),'w',encoding='utf-8') as f:
-            json.dump(data,f,ensure_ascii=False,indent=4)
+        with open(Path(path), 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
         return self.text_list
- 
