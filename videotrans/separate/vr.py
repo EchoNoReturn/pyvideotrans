@@ -26,7 +26,10 @@ class AudioPre:
             "agg": agg,
             "high_end_process": "mirroring",
         }
-        mp = ModelParameters(f"{config.ROOT_DIR}/uvr5_weights/modelparams/2band_44100_lofi.json")
+        #   f"{config.ROOT_DIR}/uvr5_weights/ultimatevocalremovergui/lib_v5/vr_network/modelparams/2band_44100_lofi.json"
+        mp = ModelParameters(
+            f"{config.ROOT_DIR}/uvr5_weights/2band_44100_lofi.json"
+        )
         model = Nets.CascadedASPPNet(mp.param["bins"] * 2)
         cpk = torch.load(model_path, map_location="cpu")
         model.load_state_dict(cpk)
@@ -40,7 +43,13 @@ class AudioPre:
         self.model = model
 
     def _path_audio_(
-            self, music_file, ins_root=None, format="wav", is_hp3=False, uuid=None, percent=[0, 1]
+        self,
+        music_file,
+        ins_root=None,
+        format="wav",
+        is_hp3=False,
+        uuid=None,
+        percent=[0, 1],
     ):
 
         if ins_root is None:
@@ -89,11 +98,11 @@ class AudioPre:
             # pdb.set_trace()
             if d == bands_n and self.data["high_end_process"] != "none":
                 input_high_end_h = (bp["n_fft"] // 2 - bp["crop_stop"]) + (
-                        self.mp.param["pre_filter_stop"] - self.mp.param["pre_filter_start"]
+                    self.mp.param["pre_filter_stop"] - self.mp.param["pre_filter_start"]
                 )
                 input_high_end = X_spec_s[d][
-                                 :, bp["n_fft"] // 2 - input_high_end_h: bp["n_fft"] // 2, :
-                                 ]
+                    :, bp["n_fft"] // 2 - input_high_end_h : bp["n_fft"] // 2, :
+                ]
 
         X_spec_m = spec_utils.combine_spectrograms(X_spec_s, self.mp)
         aggresive_set = float(self.data["agg"] / 100)
@@ -103,9 +112,14 @@ class AudioPre:
         }
         with torch.no_grad():
             pred, X_mag, X_phase = inference(
-                X_spec_m, self.device, self.model, aggressiveness, self.data, self.source,
+                X_spec_m,
+                self.device,
+                self.model,
+                aggressiveness,
+                self.data,
+                self.source,
                 uuid=uuid,
-                percent=percent
+                percent=percent,
             )
         # Postprocess
         if self.data["postprocess"]:
