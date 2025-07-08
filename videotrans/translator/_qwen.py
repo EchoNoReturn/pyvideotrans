@@ -38,7 +38,7 @@ class Qwen(BaseTrans):
         return language_map.get(language_code)
 
     @staticmethod
-    def openAI(content, old_language, new_language, retries=5, delay=5):
+    def openAI(content, old_language, new_language, retries=20, delay=5):
         for attempt in range(retries):
             try:
                 response = OpenAI(
@@ -59,17 +59,17 @@ class Qwen(BaseTrans):
                 return response.choices[0].message.content
             except Exception as e:
                 print(f"[重试] 第 {attempt + 1}/{retries} 次遇到未知错误：{e}，等待 {delay} 秒重试...")
-                # if 'Input data may contain inappropriate content' in str(e):
-                #     print("Google Translator ===============================> ")
-                #     url = f"https://translate.google.com/m?tl={Qwen.map_language_google(new_language)}&sl={Qwen.map_language_google(old_language)}&q={content}"
-                #     headers = {
-                #         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36'
-                #     }
-                #     response = requests.get(url=url, headers=headers, timeout=300, verify=False)
-                #     if response.status_code == 200:
-                #         match = re.search(r'<div class="result-container">(.*?)</div>', response.text)
-                #         if match:
-                #             return match.group(1)
+                if 'Input data may contain inappropriate content' in str(e):
+                    print("Google Translator ===============================> ")
+                    url = f"https://translate.google.com/m?tl={Qwen.map_language_google(new_language)}&sl={Qwen.map_language_google(old_language)}&q={content}"
+                    headers = {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36'
+                    }
+                    response = requests.get(url=url, headers=headers, timeout=300, verify=False)
+                    if response.status_code == 200:
+                        match = re.search(r'<div class="result-container">(.*?)</div>', response.text)
+                        if match:
+                            return match.group(1)
                 time.sleep(delay)
         raise Exception("超过最大重试次数，翻译失败")
 

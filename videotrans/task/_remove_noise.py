@@ -15,7 +15,7 @@ def remove_noise(audio_path, output_file):
             pass
         ans = pipeline(
             Tasks.acoustic_noise_suppression,
-            model='damo/speech_zipenhancer_ans_multiloss_16k_base')
+            model='./noise_model')
         result = ans(
             audio_path,
             output_path=output_file)

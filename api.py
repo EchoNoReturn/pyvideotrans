@@ -33,7 +33,7 @@ if __name__ == "__main__":
     # 设置根目录和默认主机、端口
     ROOT_DIR = config.ROOT_DIR
     HOST = "127.0.0.1"
-    PORT = 9011
+    PORT = 19011
     # HOST = "0.0.0.0"
     # PORT = 8086
 
@@ -480,7 +480,7 @@ if __name__ == "__main__":
             "source_language": data.get("sourceLanguage"),
             "target_language": data.get("targetLanguage"),
             # 配音
-            "tts_type": 1,
+            "tts_type": 1, # 0:edgetts      1:cosyvoice
             "voice_role": data.get("voiceRole", "clone"),  # clone-single
             "refer_audio": data.get("referAudio", ""),  # 参考音频oss
             "refer_text": data.get("referText", ""),  # 参考文本
